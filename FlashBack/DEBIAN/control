@@ -5,7 +5,7 @@ Version: 1.0-beta1
 Architecture: iphoneos-arm
 Description: Change the way we do setups.
 Homepage: https://flashback.github.io
-Depiction: https://flashback.github.io/repo/depicts/undertime.html
+Depiction: https://flashback.github.io/depicts/com.mpg13.FlashBack.html
 Maintainer: MPG13 <micahplacido@gmail.com>
 Author: MPG13 <micahplacido@gmail.com>
 Section: Tweaks
