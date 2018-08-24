@@ -1,10 +1,43 @@
-#!/bin/bash
+#!/bin/sh
+
+# MCApollo / Flashback
+
+# _______________             ______ ______              ______  
+# ___  ____/__  /_____ __________  /____  /_______ _________  /__
+# __  /_   __  /_  __ `/_  ___/_  __ \_  __ \  __ `/  ___/_  //_/
+# _  __/   _  / / /_/ /_(__  )_  / / /  /_/ / /_/ // /__ _  ,<   
+# /_/      /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
+
+FLASHBACKDIR=""
+BACKUPNAME=""
+DEBUG="echo"
+FLASHBACKDIR="/Library/FlashBack"
+
+tests() {
+if [ ! $(id -u) = "0" ] ; then
+	echo -e "\n\e[0;100m[*]\e[0m \e[1;31mMust be \e[4;37mroot\e[0m \n\e[1;31m\e[0;100m[*]\e[0m Current User is\e[0m \e[4;37m`whoami`\e[0m\n"
+exit 1 ; fi
+
+if [ ! -d $FLASHBACKDIR ] ; then
+	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
+	
+	read -rp "[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
+		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
+		 then
+		 	$DEBUG mkdir -p $FLASHBACKDIR/Backups || exit 1
+                 else
+		 	echo -e "\e[1;97m\"Run away! Run away!\" \e[0m\n"
+    			exit 1; fi; fi
+
+
+# STOP HERE
+exit 1
 
 flasbackDir="/Library/FlashBack"
 if [ ! -d $flasbackDir/Backups ]; then
 	mkdir $flasbackDir
 	mkdir $flasbackDir/Backups
-fi
+fi } 
 
 shopt -s extglob
 
