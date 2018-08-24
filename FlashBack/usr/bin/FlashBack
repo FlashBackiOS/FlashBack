@@ -13,36 +13,39 @@ BACKUPNAME=""
 DEBUG="echo"
 FLASHBACKDIR="/Library/FlashBack"
 
-tests() {
-if [ ! $(id -u) = "0" ] ; then
+tests() { # ------------\
+if [ ! $(id -u) = "0" ] ; then # root check
 	echo -e "\n\e[0;100m[*]\e[0m \e[1;31mMust be \e[4;37mroot\e[0m \n\e[1;31m\e[0;100m[*]\e[0m Current User is\e[0m \e[4;37m`whoami`\e[0m\n"
 exit 1 ; fi
 
-if [ ! -d $FLASHBACKDIR ] ; then
+if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups, ask the user to create it if it doesn't exist.
 	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
-	
-	read -rp "[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
+	read -rp "	[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
 		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
-		 then
+		 then 	# Do it.
 		 	$DEBUG mkdir -p $FLASHBACKDIR/Backups || exit 1
-                 else
-		 	echo -e "\e[1;97m\"Run away! Run away!\" \e[0m\n"
-    			exit 1; fi; fi
+                 else 	# or Abort.
+		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
+    			exit 1; fi; fi }
+# -----------------------\
 
-
-# STOP HERE
-exit 1
-
-flasbackDir="/Library/FlashBack"
-if [ ! -d $flasbackDir/Backups ]; then
-	mkdir $flasbackDir
-	mkdir $flasbackDir/Backups
-fi } 
+spinner_function() { # https://stackoverflow.com/questions/12498304/using-bash-to-display-a-progress-working-indicator
+	pid=$! # Process Id of the previous running command
+	spin='-\|/'
+	i=0
+		while kill -0 $pid 2>/dev/null
+	do
+  		i=$(( (i+1) %4 ))
+  		printf "\r${spin:$i:1}"
+  		sleep .1
+	done }
+# -----------------------\
 
 shopt -s extglob
 
 pause(){
-	read -p "[!]Press return to continue..." fackEnterKey
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[40mPress enter to continue...\e[0m'`"
+	echo -e "\n"
 }
 
 one(){		#Backup current preferences
