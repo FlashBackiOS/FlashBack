@@ -1,7 +1,7 @@
 Package: com.mpg13.FlashBack
 Name: FlashBack
 Depends: mobilesubstrate
-Version: 1.0-beta2
+Version: 1.0-beta3
 Architecture: iphoneos-arm
 Description: Change the way we do setups.
 Homepage: https://flashback.github.io
