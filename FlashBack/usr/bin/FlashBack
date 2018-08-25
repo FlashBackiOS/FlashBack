@@ -7,6 +7,7 @@
 # __  /_   __  /_  __ `/_  ___/_  __ \_  __ \  __ `/  ___/_  //_/
 # _  __/   _  / / /_/ /_(__  )_  / / /  /_/ / /_/ // /__ _  ,<   
 # /_/      /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
+# "Backup, restore, and share your iOS setups."
 
 # Notes:
 # ** This is a dangerous script if something goes wrong. ** 
@@ -23,6 +24,11 @@ SELECTLOCATION=
 AUTOBACKUPLOCATION=
 DELETEBACKUP=
 DELETESELECT=
+
+# report(){ # report to dev example function
+# echo "$foo-bar has went wrong"
+# echo "Report the dev if this happens more than once"
+# exit 1 ; fi ;} # Kill the script
 
 tests() { # ------------\
 if [ ! $(id -u) = "0" ] ; then # root check
@@ -53,6 +59,8 @@ shopt -s extglob # "Shell option set extglob" https://www.linuxjournal.com/conte
 one() { # Function that backs-up the current preferences
 	set -f # "Disable file name generation (globbing)."
 	# echo "Sample text, make me into a pretty banner."
+	
+	TEMPBACKUPNAME=
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
 	# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/} # Stop bad inputs
@@ -74,7 +82,7 @@ one() { # Function that backs-up the current preferences
 	# |||||||||||||||||||||||||||||||||||
 	if [[ ! $STATUS = "" ]] ; then
 		echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
-		exit 1 ; fi # TODO: Make a report to developer function.
+		exit 1 ; fi # TODO MCApollo: Make a report to developer function.
 	# //////////////////////////////////
 	
 	echo -e "\n\e[40m Success! \e[0m \n"
@@ -92,16 +100,20 @@ two() { # Restore backups made with function one
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
 		echo -e "\e[40m ----> \e[0m $i" ; done
 	 
+	SELECTBACKUP=
 	while [[ $SELECTBACKUP = "" ]] ; do
 		set -f
+		unset RESET
 		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " SELECTBACKUP
 		SELECTBACKUP=${SELECTBACKUP//[^a-zA-Z0-9-.]/}
 		if [[ $SELECTBACKUP = "" ]] ; then
-			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
-		set +f ; done
+			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" 
+			RESET="YES"; fi
+		if [[ ! -d $FLASHBACKDIR/Backups/$SELECTBACKUP ]] && [[ -z ${RESET+x} ]]  ; then
+                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
+                        SELECTBACKUP="" ; fi
 		
-	# TODO: MCApollo
-	# Check if the User's choice is actually vaild.
+		set +f ; done
 		
 	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
 	AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
@@ -129,7 +141,7 @@ two() { # Restore backups made with function one
 	if [ -z ${SSH_TTY+x} ] ; then # Should we kill SpringBoard or not?
 		# This is NewTerm
 		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
-		$DEBUG killall -9 SpringBoard & exit 0 # Kill the script.
+		$DEBUG killall -9 SpringBoard && exit 0 # Kill the script.
 	else
 		# This is a SSH Session
 		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
@@ -137,42 +149,49 @@ two() { # Restore backups made with function one
 	fi
 	pause ;}
 	
-three(){
+three(){ # Function that deletes backups
 	echo -e "\n\e[40m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
 		echo -e "\e[40m ----> \e[0m $i" ; done
-	
+		
+	DELETEBACKUP=
 	while [[ $DELETEBACKUP = "" ]] ; do
-		set -f
-		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
-		DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
-		if [[ $DELETEBACKUP = "" ]] ; then
-			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
-		set +f ; done
+                unset RESET
+                set -f
+                read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
+                DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
+               if [[ $DELETEBACKUP = "" ]]; then
+                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m" 
+                                RESET="YES" ; fi
+               if [[ ! -d $DELETEBACKUP ]] && [[ -z ${RESET+x} ]]  ; then
+                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
+                        DELETEBACKUP="" ; fi
+               set +f ; done
 	DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
 	
-	# TODO: MCApollo
-	# if [ ! -d $DELETELOCATION ]
-	# foo-bar doesn't exist!
 	
-	# TODO: MCApollo
-	# "Are you sure?" Check ; See function four
+	DELETECP=
+	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete this backup?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
+	read -p "-----> " DELETECP
+	if [[ $DELETECP = "FLASHBACK" ]]
+	then
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
+		$DEBUG rm -r $DELETELOCATION
+	else
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mNot deleting $DELETELOCATION\e[0m"; fi
 	
-	echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
-	
-	$DEBUG rm -r $DELETELOCATION
 	pause ;}
 
-four(){
+four(){ # Function that deletes autobackups made in function two
+	DELETEAB=
 	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete all AutoBackups?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
-	read -p "----->  " DELETEAB
+	read -p "-----> " DELETEAB
 	if [[ $DELETEAB = "FLASHBACK" ]]
 	then
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting all autobackups...\e[0m"
 		$DEBUG rm -r $FLASHBACKUPDIR/Backups/AutoBackup*
 	else
-		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"
-		exit 0 ; fi
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"; fi
 	pause ;}
 	
 five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. - Apollo
@@ -226,7 +245,7 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. -
 	
 	echo ""
 	echo "Creating working directory..."
-	mkdir $FLASHBACKDIRworking
+	mkdir $FLASHBACKDIR/working
 	workingDir=$FLASHBACKDIR/working/$packageBackup
 	echo "Creating debian layout..."
 	mkdir $workingDir # Here to-
@@ -237,7 +256,7 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. -
 	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup # Here, is not need
 	
 	# mkdir -p $workingDir/Library/FlashBack/Backups/$packageBackup
-	# mkdir -p $workingDir$FLASHBACKDIR/Backups/$packageBackup # Correct answer; you're hard-coding /Library/FlashBack
+	# $DEBUG mkdir -p $workingDir$FLASHBACKDIR/Backups/$packageBackup # Correct answer; you're hard-coding /Library/FlashBack
 
 	echo "Copying backup to debian format..."
 	excludeControl="!(control*)"
@@ -286,6 +305,10 @@ EOF
 	rm -r -f $FLASHBACKDIR/working # Use /tmp 
 	echo " "
 	echo "The DEB can be found in "$FLASHBACKDIR"/"$packageBackup".deb"
+
+
+# TODO MCApollo
+# Use dpkg-deb or dpkg to make sure it's a vaild package. (Maybe extract it?) 
 
 	pause
 }
