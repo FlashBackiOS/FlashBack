@@ -10,12 +10,15 @@
 
 # Notes:
 # Should be using printf instead of 'echo -e'
+# "set -e" should be used instead of || (at least we have some fancy debug messages)
 
 DEBUG="echo" # set to "echo" to avoid running commands that edit the filesystem.
 FLASHBACKDIR="/Library/FlashBack"
 BACKUPNAME=$(date +%m-%d-%y-`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1`)
 BACKUPLOCATION=
 STATUS=
+SELECTLOCATION=
+AUTOBACKUPLOCATION=
 
 tests() { # ------------\
 if [ ! $(id -u) = "0" ] ; then # root check
@@ -111,13 +114,12 @@ one() { # Function that backs-up the current preferences
 two() { # Restore backups made with function one
 
 	# TODO
-	# Check if any backups exists before doing this.
+	# Check if any backups exist before doing this.
 	# We softlock if we don't have any backups
 	
 	echo -e "\n\e[40m Available Backups: \e[0m \n"
-	for i in $(ls $FLASHBACKDIR/Backups/ || STATUS="No Backups!") ; do # Find and sed are not default commands- can't exclude files.
-		echo -e "\e[40m ----> \e[0m $i" 
-		echo $STATUS; done
+	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" ; done
 	 
 	while [[ $SELECTBACKUP = "" ]] ; do
 		set -f
@@ -127,28 +129,67 @@ two() { # Restore backups made with function one
 			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
 		set +f ; done
 		
-
-two(){		#Restore backup functions
-	echo " "
-	echo "Available Backups:"
-	echo " "
-	ls $flasbackDir/Backups/		#List all Backup Folders which match their names
-	echo " "
-	read -p "[!]Choose a Backup: " selectedBackup		#Let user select which backup
-	if [[ $selectedBackup = "" ]]
-	then
-		echo "No backup selected!"
-		pause
+	# TODO
+	# Check if the User's choice is actually vaild.
+		
+	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
+	AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
+	
+	echo "foo-bar" # echo "Moving current Preferences to "$autoBackupLocation"..."
+	
+	$DEBUG mkdir -p $AUTOBACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	$DEBUG cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
+	$DEBUG cp -rf /var/mobile/Library/SpringBoard/IconState.plist $AUTOBACKUPLOCATION/IconLayout/IconState.plist || status="cp failed"
+	
+	echo "foo-bar" # echo "Copying Backup to appropriate system directories..."
+	
+	$DEBUG cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
+	$DEBUG cp $selectedLocation/IconLayout/IconState.plist /var/mobile/Library/SpringBoard/IconState.plist || STATUS="cp failed"
+	
+	if [[ ! $STATUS = "" ]] ; then
+	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
+	exit 1 ; fi # TODO: Make a report to developer function.
+	
+	
+	# Should we kill SpringBoard or not?"
+	if [ -z ${SSH_TTY+x} ] ; then
+		# This is NewTerm
+		echo "Run killall -9 Springboard"
+	else
+		# This is a SSH Session
+		echo "killall -9 Springboard"
 	fi
-	selectedLocation=$flasbackDir"/Backups/"$selectedBackup		#uses variable to determine backup to use
-	autoBackupLocation=$flasbackDir"/Backups/AutoBackup_"$(date '+%d-%m-%Y_%H:%M:%S')	#Sets autobackup location with date and time
-	mkdir $autoBackupLocation		#Creates autobackup folder
-	mkdir $autoBackupLocation/Preferences		#Creates autobackup Preference Folder
-	mkdir $autoBackupLocation/IconLayout		#Creates autobackup Preference Folder
-	echo ""
-	echo "Moving current Preferences to "$autoBackupLocation"..."
-	cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $autoBackupLocation/Preferences/		#Copy copy all non-apple Plists to Preference folder within autobackup haha
-	cp -r -f /var/mobile/Library/SpringBoard/IconState.plist $autoBackupLocation/IconLayout/IconState.plist		#copy IconState Plist to IconLayout folder within backup
+	
+	#Copy all Plists from backup Preference folder to System Icon layout
+	echo "Rebuilding UI cache and Killing SpringBoard..."
+	$DEBUG uicache		#Rebuilds UI Cache - hopefully this doesn't break anything.
+	$DEBUG uicache
+	echo "Thanks for using FlashBack!"
+	$DEBUG killall -9 SpringBoard
+	pause
+	
+
+#two(){		#Restore backup functions
+#	echo " "
+#	echo "Available Backups:"
+#	echo " "
+#	ls $flasbackDir/Backups/		#List all Backup Folders which match their names
+#	echo " "
+#	read -p "[!]Choose a Backup: " selectedBackup		#Let user select which backup
+#	if [[ $selectedBackup = "" ]]
+#	then
+#		echo "No backup selected!"
+#		pause
+#	fi
+#	selectedLocation=$flasbackDir"/Backups/"$selectedBackup		#uses variable to determine backup to use
+#	autoBackupLocation=$flasbackDir"/Backups/AutoBackup_"$(date '+%d-%m-%Y_%H:%M:%S')	#Sets autobackup location with date and time
+#	mkdir $autoBackupLocation		#Creates autobackup folder
+#	mkdir $autoBackupLocation/Preferences		#Creates autobackup Preference Folder
+#	mkdir $autoBackupLocation/IconLayout		#Creates autobackup Preference Folder
+#	echo ""
+#	echo "Moving current Preferences to "$autoBackupLocation"..."
+#	cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $autoBackupLocation/Preferences/		#Copy copy all non-apple Plists to Preference folder within autobackup haha
+#	cp -r -f /var/mobile/Library/SpringBoard/IconState.plist $autoBackupLocation/IconLayout/IconState.plist		#copy IconState Plist to IconLayout folder within backup
 	echo " "
 	echo "Copying Backup to appropriate system directories..."
 	cp -r $selectedLocation/Preferences/*.plist /var/mobile/Library/Preferences/		#Copy all Plists from backup Preference folder to System Preferences
