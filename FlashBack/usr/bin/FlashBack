@@ -48,19 +48,23 @@ spinner_function() { # https://stackoverflow.com/questions/12498304/using-bash-t
 pause(){
 	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[40mPress enter to continue...\e[0m'`"
 	echo -e "\n" ;}
-# -----------------------\
+# -----------------------\ 
 
 shopt -s extglob
 
 one() { # Function that backs-up the current preferences
+	set -f # "Disable file name generation (globbing)."
 	echo "Sample text, make me into a pretty banner."
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
 	# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+	TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/} # Stop bad inputs
 	if [[ $TEMPBACKUPNAME = "" ]] ; then
-		echo -e "\n\e[0;100m[!]\e[0m \e[40mNo input... Using $BACKUPNAME instead\e[0m"
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mBad or no input... Using $BACKUPNAME instead\e[0m"
 	else
+		TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/}
 		BACKUPNAME=$TEMPBACKUPNAME; fi
 	# //////////////////////////////////
+	set +f
 	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
 	$DEBUG mkdir -p $BACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying to $BACKUPLOCATION\e[0m"
@@ -71,38 +75,58 @@ one() { # Function that backs-up the current preferences
 	
 	# |||||||||||||||||||||||||||||||||||
 	if [[ ! $STATUS = "" ]] ; then
-		echo "ERROR MAKE ME PRETTY" # echo -e "\n [*] something went wrong at $STATUS 
-		exit 1 ; fi
+		echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
+		exit 1 ; fi # TODO: Make a report to developer function.
 	# //////////////////////////////////
 	
 	echo -e "\n\e[40m Success! \e[0m \n"
 	pause ;}
 
 
-one(){		#Backup current preferences
-	echo " "
-	read -p "[!]Enter Backup Name: " backupName		#Enter the name of the backup
-	if [[ $backupName = "" ]]
-	then
-		echo "No name entered!"
-		pause
-	fi
-	backupLocation="$flasbackDir/Backups/"$backupName	#backup folder with backup's name
-	mkdir $backupLocation		#Creates backup folder
-	mkdir $backupLocation/Preferences 	#Creates Backup Preference Folder
-	mkdir $backupLocation/IconLayout 	#Creates Backup Icon Layout Folder
-	
-	echo ""
-	echo "Copying to "$backupLocation"..."
+#one(){		#Backup current preferences
+#	echo " "
+#	read -p "[!]Enter Backup Name: " backupName		#Enter the name of the backup
+#	if [[ $backupName = "" ]]
+#	then
+#		echo "No name entered!"
+#		pause
+#	fi
+#	backupLocation="$flasbackDir/Backups/"$backupName	#backup folder with backup's name
+#	mkdir $backupLocation		#Creates backup folder
+#	mkdir $backupLocation/Preferences 	#Creates Backup Preference Folder
+#	mkdir $backupLocation/IconLayout 	#Creates Backup Icon Layout Folder
+#	
+#	echo ""
+#	echo "Copying to "$backupLocation"..."
+#
+#	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
+#	cp -r -f "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist $backupLocation/Preferences/ #copy all non-apple Plists to Preference folder within backup haha
+#	cp -r -f /var/mobile/Library/SpringBoard/IconState.plist $backupLocation/IconLayout/IconState.plist		#copy IconState Plist to IconLayout folder within backup
+#	echo ""
+#	echo "Succeeded!"
+#	
+#	pause
+#}
 
-	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
-	cp -r -f "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist $backupLocation/Preferences/ #copy all non-apple Plists to Preference folder within backup haha
-	cp -r -f /var/mobile/Library/SpringBoard/IconState.plist $backupLocation/IconLayout/IconState.plist		#copy IconState Plist to IconLayout folder within backup
-	echo ""
-	echo "Succeeded!"
+two() { # Restore backups made with function one
+
+	# TODO
+	# Check if any backups exists before doing this.
+	# We softlock if we don't have any backups
 	
-	pause
-}
+	echo -e "\n\e[40m Available Backups: \e[0m \n"
+	for i in $(ls $FLASHBACKDIR/Backups/ || STATUS="No Backups!") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" 
+		echo $STATUS; done
+	 
+	while [[ $SELECTBACKUP = "" ]] ; do
+		set -f
+		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " SELECTBACKUP
+		SELECTBACKUP=${SELECTBACKUP//[^a-zA-Z0-9-.]/}
+		if [[ $SELECTBACKUP = "" ]] ; then
+			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
+		set +f ; done
+		
 
 two(){		#Restore backup functions
 	echo " "
