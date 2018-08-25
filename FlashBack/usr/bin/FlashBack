@@ -52,7 +52,7 @@ shopt -s extglob # "Shell option set extglob" https://www.linuxjournal.com/conte
 
 one() { # Function that backs-up the current preferences
 	set -f # "Disable file name generation (globbing)."
-	echo "Sample text, make me into a pretty banner."
+	# echo "Sample text, make me into a pretty banner."
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
 	# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 	TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/} # Stop bad inputs
@@ -175,7 +175,7 @@ four(){
 		exit 0 ; fi
 	pause ;}
 	
-five(){ # I'm not going to painstakingly fix this. You gotta do that yourself.
+five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. - Apollo
 	echo -e "\n\e[40m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
 		echo -e "\e[40m ----> \e[0m $i" ; done
@@ -184,6 +184,8 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself.
 	read -p "[!]Enter Your Email: " userEmail		#Enter the name of the setup creator
 	read -p "[!]Enter A Short Description: " userDesc		#Enter a description
 	
+	# TODO: MCApollo
+	# Clean the input, wildcard (*) makes it game over.
 	
 	echo " "
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -206,7 +208,7 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself.
 		echo " "
 		read -p "[!]Staring automatic mode. A list of installed packages will appear in a moment. Use that list to select which packages are dependancies. Press enter to proceed."
 		apt-mark auto "gsc*" &> /dev/null # || STATUS="SEG FAULT" or STATUS="apt-mark failed"
-		# For some reason, apt likes to seg fault. Maybe due to memory?
+		# For some reason, apt likes to seg fault. Maybe due to too much memory is being used?
 		echo " "
 		apt-mark showmanual # || STATUS="SEG FAULT"
 		
@@ -287,6 +289,10 @@ EOF
 
 	pause
 }
+
+# TODO Idea: MCApollo
+# Get the amount of $COLUMNS and $LINES, scale the UI base on that information
+# For example, (( ~ X $COLUMNS)) into a VAR and then echo $VAR instead of hard-coding "~~~~~~~~~~~"
 
 show_menus() {
 	clear
