@@ -9,10 +9,10 @@
 # /_/      /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
 
 # Notes:
-# This is a dangerous script if something goes wrong.
+# ** This is a dangerous script if something goes wrong. ** 
 # Should be using printf instead of 'echo -e'
 # "set -e" should be used instead of || (at least we have some fancy debug messages)
-# DO NOT USE "cp -f" WHEN REPLACING SYSTEM FILES.
+# DO NOT USE "cp -f" WHEN REPLACING SYSTEM FILES. Its dangerous, but yet no other solution comes to mind.
 
 DEBUG="echo" # set to "echo" to avoid running commands that edit the filesystem.
 FLASHBACKDIR="/Library/FlashBack"
@@ -84,7 +84,7 @@ one() { # Function that backs-up the current preferences
 
 two() { # Restore backups made with function one
 
-	# TODO
+	# TODO: MCApollo
 	# Check if any backups exist before doing this.
 	# We softlock if we don't have any backups
 	
@@ -100,7 +100,7 @@ two() { # Restore backups made with function one
 			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
 		set +f ; done
 		
-	# TODO
+	# TODO: MCApollo
 	# Check if the User's choice is actually vaild.
 		
 	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
@@ -151,12 +151,12 @@ three(){
 		set +f ; done
 	DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
 	
-	# TODO
+	# TODO: MCApollo
 	# if [ ! -d $DELETELOCATION ]
 	# foo-bar doesn't exist!
 	
-	# TODO
-	# "Are you sure?" Check
+	# TODO: MCApollo
+	# "Are you sure?" Check ; See function four
 	
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
 	
@@ -205,9 +205,16 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself.
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		echo " "
 		read -p "[!]Staring automatic mode. A list of installed packages will appear in a moment. Use that list to select which packages are dependancies. Press enter to proceed."
-		apt-mark auto "gsc*" &> /dev/null
+		apt-mark auto "gsc*" &> /dev/null # || STATUS="SEG FAULT" or STATUS="apt-mark failed"
+		# For some reason, apt likes to seg fault. Maybe due to memory?
 		echo " "
-		apt-mark showmanual
+		apt-mark showmanual # || STATUS="SEG FAULT"
+		
+		# TODO: MCApollo
+		# Copy paste the STATUS check and exit if seg fault.
+		# Or better yet, the exit code is 139 if it's a seg fault.
+		# Use the exit code to see if apt seg fault; exit or try again once.
+		
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		echo ""
 		read -p "[!]Please copy all desired dependancies from above EXACTLY as they are displayed. Separate them with a comma and a space (, ): " userSetDependancies
@@ -220,12 +227,13 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself.
 	mkdir $FLASHBACKDIRworking
 	workingDir=$FLASHBACKDIR/working/$packageBackup
 	echo "Creating debian layout..."
-	mkdir $workingDir
+	mkdir $workingDir # Here to-
 	mkdir $workingDir/DEBIAN/
 	mkdir $workingDir/Library/
 	mkdir $workingDir/Library/FlashBack/
-	mkdir $workingDir/Library/FlashBack/Backups/
-	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup
+	mkdir $workingDir/Library/FlashBack/Backups/ 
+	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup # Here, is not need
+	
 	# mkdir -p $workingDir/Library/FlashBack/Backups/$packageBackup
 	# mkdir -p $workingDir$FLASHBACKDIR/Backups/$packageBackup # Correct answer; you're hard-coding /Library/FlashBack
 
