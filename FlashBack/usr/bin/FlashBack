@@ -21,6 +21,8 @@ BACKUPLOCATION=
 STATUS=
 SELECTLOCATION=
 AUTOBACKUPLOCATION=
+DELETEBACKUP=
+DELETESELECT=
 
 tests() { # ------------\
 if [ ! $(id -u) = "0" ] ; then # root check
@@ -150,38 +152,34 @@ two() { # Restore backups made with function one
 	
 three(){
 	echo -e "\n\e[40m Available Backps: \e[0m \n"
-
-
-three(){
-echo " "
-	echo "Available Backups:"
-	echo " "
-	ls $flasbackDir/Backups/		#Lists all backups
-	echo " "
-	read -p "[!]Choose a Backup: " deleteBackup		#User selects backup to delete
-	if [[ $deleteBackup = "" ]]
-	then
-		echo "No backup deleted."
-		pause
-	fi
-	deleteLocation=$flasbackDir"/Backups/"$deleteBackup	#location from selected backup
-	echo "Deleting "$deleteBackup"..."
-	rm -r $deleteLocation		#delete backup folder
-	pause
-}
+	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" ; done
+		
+	while [[ $DELETEBACKUP = "" ]] ; do
+		set -f
+		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
+		DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
+		if [[ $DELETEBACKUP = "" ]] ; then
+			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
+		set +f ; done
+	DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
+	
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
+	
+	$DEBUG rm -r $DELETELOCATION
+	pause ;}
 
 four(){
-	echo ""
-	read -p "[!]Are you sure you want to delete all autobackups? (y/n): " shouldDeleteAB
-	if [[ $shouldDeleteAB = "y" ]]
+	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete all AutoBackups?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
+	read -p "----->  " DELETEAB
+	if [[ $DELETEAB = "FLASHBACK" ]]
 	then
-		echo "Deleting all autobackups..."
-		rm -r $flasbackDir/Backups/AutoBackup*		#Delete all folders that start with AutoBackup
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting all autobackups...\e[0m"
+		$DEBUG rm -r $FLASHBACKUPDIR/Backups/AutoBackup*
 	else
-		echo "Not deleting autobackups!"
-	fi
-	pause
-}
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"
+		exit 0 ; fi
+	pause ;}
 
 five(){
 	echo " "
