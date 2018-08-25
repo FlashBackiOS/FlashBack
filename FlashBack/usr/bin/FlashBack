@@ -8,14 +8,18 @@
 # _  __/   _  / / /_/ /_(__  )_  / / /  /_/ / /_/ // /__ _  ,<   
 # /_/      /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
 
-FLASHBACKDIR=""
-BACKUPNAME=""
-DEBUG="echo"
+# Notes:
+# Should be using printf instead of 'echo -e'
+
+DEBUG="echo" # set to "echo" to avoid running commands that edit the filesystem.
 FLASHBACKDIR="/Library/FlashBack"
+BACKUPNAME=$(date +%m-%d-%y-`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1`)
+BACKUPLOCATION=
+STATUS=
 
 tests() { # ------------\
 if [ ! $(id -u) = "0" ] ; then # root check
-	echo -e "\n\e[0;100m[*]\e[0m \e[1;31mMust be \e[4;37mroot\e[0m \n\e[1;31m\e[0;100m[*]\e[0m Current User is\e[0m \e[4;37m`whoami`\e[0m\n"
+	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mMust be \e[4;37mroot\e[0m \n\e[1;31m\e[0;100m[*]\e[0m Current User is\e[0m \e[4;37m$USER\e[0m\n"
 exit 1 ; fi
 
 if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups, ask the user to create it if it doesn't exist.
@@ -26,7 +30,7 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 		 	$DEBUG mkdir -p $FLASHBACKDIR/Backups || exit 1
                  else 	# or Abort.
 		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
-    			exit 1; fi; fi }
+    			exit 1; fi; fi ;}
 # -----------------------\
 
 spinner_function() { # https://stackoverflow.com/questions/12498304/using-bash-to-display-a-progress-working-indicator
@@ -38,15 +42,42 @@ spinner_function() { # https://stackoverflow.com/questions/12498304/using-bash-t
   		i=$(( (i+1) %4 ))
   		printf "\r${spin:$i:1}"
   		sleep .1
-	done }
+	done ;}
+# -----------------------\
+
+pause(){
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[40mPress enter to continue...\e[0m'`"
+	echo -e "\n" ;}
 # -----------------------\
 
 shopt -s extglob
 
-pause(){
-	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[40mPress enter to continue...\e[0m'`"
-	echo -e "\n"
-}
+one() { # Function that backs-up the current preferences
+	echo "Sample text, make me into a pretty banner."
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
+	# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+	if [[ $TEMPBACKUPNAME = "" ]] ; then
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mNo input... Using $BACKUPNAME instead\e[0m"
+	else
+		BACKUPNAME=$TEMPBACKUPNAME; fi
+	# //////////////////////////////////
+	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
+	$DEBUG mkdir -p $BACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying to $BACKUPLOCATION\e[0m"
+	
+	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
+	$DEBUG cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
+	$DEBUG cp -rf /var/mobile/Library/SpringBoard/IconState.plist $BACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"		#copy IconState Plist to IconLayout folder within backup
+	
+	# |||||||||||||||||||||||||||||||||||
+	if [[ ! $STATUS = "" ]] ; then
+		echo "ERROR MAKE ME PRETTY" # echo -e "\n [*] something went wrong at $STATUS 
+		exit 1 ; fi
+	# //////////////////////////////////
+	
+	echo -e "\n\e[40m Success! \e[0m \n"
+	pause ;}
+
 
 one(){		#Backup current preferences
 	echo " "
