@@ -189,7 +189,7 @@ four(){ # Function that deletes autobackups made in function two
 	if [[ $DELETEAB = "FLASHBACK" ]]
 	then
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting all autobackups...\e[0m"
-		$DEBUG rm -r $FLASHBACKUPDIR/Backups/AutoBackup*
+		$DEBUG rm -r $FLASHBACKDIR/Backups/AutoBackup*
 	else
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"; fi
 	pause ;}
