@@ -30,7 +30,7 @@ if [ ! $(id -u) = "0" ] ; then # root check
 exit 1 ; fi
 
 if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups, ask the user to create it if it doesn't exist.
-	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
+	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR/Backups doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
 	read -rp "	[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
 		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
 		 then 	# Do it.
@@ -38,19 +38,6 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
                  else 	# or Abort.
 		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
     			exit 1; fi; fi ;}
-# -----------------------\
-
-spinner_function() { # https://stackoverflow.com/questions/12498304/using-bash-to-display-a-progress-working-indicator
-	pid=$! # Process Id of the previous running command
-	spin='-\|/'
-	i=0
-		while kill -0 $pid 2>/dev/null
-	do
-  		i=$(( (i+1) %4 ))
-  		printf "\r${spin:$i:1}"
-  		sleep .1
-	done ;}
-	
 # -----------------------\
 
 pause(){
@@ -154,7 +141,7 @@ three(){
 	echo -e "\n\e[40m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
 		echo -e "\e[40m ----> \e[0m $i" ; done
-		
+	
 	while [[ $DELETEBACKUP = "" ]] ; do
 		set -f
 		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
@@ -163,6 +150,13 @@ three(){
 			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" ; fi
 		set +f ; done
 	DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
+	
+	# TODO
+	# if [ ! -d $DELETELOCATION ]
+	# foo-bar doesn't exist!
+	
+	# TODO
+	# "Are you sure?" Check
 	
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
 	
@@ -180,13 +174,11 @@ four(){
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"
 		exit 0 ; fi
 	pause ;}
-
-five(){
-	echo " "
-	echo "Available Backups:"
-	echo " "
-	ls $flasbackDir/Backups/		#Lists all backups
-	echo " "
+	
+five(){ # I'm not going to painstakingly fix this. You gotta do that yourself.
+	echo -e "\n\e[40m Available Backps: \e[0m \n"
+	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" ; done
 	read -p "[!]Choose a Backup: " packageBackup		#User selects backup to package, hopefully
 	read -p "[!]Enter Your UserName: " userName		#Enter the name of the setup creator
 	read -p "[!]Enter Your Email: " userEmail		#Enter the name of the setup creator
@@ -225,8 +217,8 @@ five(){
 	
 	echo ""
 	echo "Creating working directory..."
-	mkdir $flasbackDir/working
-	workingDir=$flasbackDir/working/$packageBackup
+	mkdir $FLASHBACKDIRworking
+	workingDir=$FLASHBACKDIR/working/$packageBackup
 	echo "Creating debian layout..."
 	mkdir $workingDir
 	mkdir $workingDir/DEBIAN/
@@ -234,10 +226,12 @@ five(){
 	mkdir $workingDir/Library/FlashBack/
 	mkdir $workingDir/Library/FlashBack/Backups/
 	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup
+	# mkdir -p $workingDir/Library/FlashBack/Backups/$packageBackup
+	# mkdir -p $workingDir$FLASHBACKDIR/Backups/$packageBackup # Correct answer; you're hard-coding /Library/FlashBack
 
 	echo "Copying backup to debian format..."
 	excludeControl="!(control*)"
-	cp -r $flasbackDir"/Backups/"$packageBackup/$excludeControl $workingDir/Library/FlashBack/Backups/$packageBackup/
+	cp -r $FLASHBACKDIR"/Backups/"$packageBackup/$excludeControl $workingDir/Library/FlashBack/Backups/$packageBackup/
 	
 	if [[ $autoMode = "yes" ]]
 	then
@@ -277,11 +271,11 @@ EOF
 	echo "Packaging DEB..."
 	dpkg-deb -Zgzip -b $workingDir
 	echo "Moving DEB..."
-	cp $workingDir.deb $flasbackDir
+	cp $workingDir.deb $FLASHBACKDIR
 	echo "Cleaning working directory..."
-	rm -r -f $flasbackDir/working
+	rm -r -f $FLASHBACKDIR/working # Use /tmp 
 	echo " "
-	echo "The DEB can be found in "$flasbackDir"/"$packageBackup".deb"
+	echo "The DEB can be found in "$FLASHBACKDIR"/"$packageBackup".deb"
 
 	pause
 }
@@ -316,6 +310,7 @@ read_options(){
 	esac
 }
 
+tests
 while true
 do
  	shopt -s extglob
