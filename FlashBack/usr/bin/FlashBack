@@ -1,118 +1,210 @@
-#!/bin/bash
+#!/bin/sh
 
-flasbackDir="/Library/FlashBack"
-if [ ! -d $flasbackDir/Backups ]; then
-	mkdir $flasbackDir
-	mkdir $flasbackDir/Backups
-fi
+# MCApollo / Flashback
 
-shopt -s extglob
+# _______________             ______ ______              ______  
+# ___  ____/__  /_____ __________  /____  /_______ _________  /__
+# __  /_   __  /_  __ `/_  ___/_  __ \_  __ \  __ `/  ___/_  //_/
+# _  __/   _  / / /_/ /_(__  )_  / / /  /_/ / /_/ // /__ _  ,<   
+# /_/      /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
+# "Backup, restore, and share your iOS setups."
+
+# Notes:
+# ** This is a dangerous script if something goes wrong. ** 
+# Should be using printf instead of 'echo -e'
+# "set -e" should be used instead of || (at least we have some fancy debug messages)
+# DO NOT USE "cp -f" WHEN REPLACING SYSTEM FILES. Its dangerous, but yet no other solution comes to mind.
+
+DEBUG="echo" # set to "echo" to avoid running commands that edit the filesystem.
+FLASHBACKDIR="/Library/FlashBack"
+BACKUPNAME=$(date +%m-%d-%y-`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1`)
+BACKUPLOCATION=
+STATUS=
+SELECTLOCATION=
+AUTOBACKUPLOCATION=
+DELETEBACKUP=
+DELETESELECT=
+
+# report(){ # report to dev example function
+# echo "$foo-bar has went wrong"
+# echo "Report the dev if this happens more than once"
+# exit 1 ; fi ;} # Kill the script
+
+tests() { # ------------\
+if [ ! $(id -u) = "0" ] ; then # root check
+	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mMust be \e[4;37mroot\e[0m \n\e[1;31m\e[0;100m[*]\e[0m Current User is\e[0m \e[4;37m$USER\e[0m\n"
+exit 1 ; fi
+
+if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups, ask the user to create it if it doesn't exist.
+	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR/Backups doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
+	read -rp "	[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
+		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
+		 then 	# Do it.
+		 	$DEBUG mkdir -p $FLASHBACKDIR/Backups || exit 1
+                 else 	# or Abort.
+		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
+    			exit 1; fi; fi ;}
+# -----------------------\
 
 pause(){
-	read -p "[!]Press return to continue..." fackEnterKey
-}
-
-one(){		#Backup current preferences
-	echo " "
-	read -p "[!]Enter Backup Name: " backupName		#Enter the name of the backup
-	if [[ $backupName = "" ]]
-	then
-		echo "No name entered!"
-		pause
-	fi
-	backupLocation="$flasbackDir/Backups/"$backupName	#backup folder with backup's name
-	mkdir $backupLocation		#Creates backup folder
-	mkdir $backupLocation/Preferences 	#Creates Backup Preference Folder
-	mkdir $backupLocation/IconLayout 	#Creates Backup Icon Layout Folder
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[40mPress enter to continue...\e[0m'`" # read has a timeout function that could be used to advance the script by its own.
+	echo -e "\n" ;}
 	
-	echo ""
-	echo "Copying to "$backupLocation"..."
+# -----------------------\ 
 
-	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
-	cp -r -f "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist $backupLocation/Preferences/ #copy all non-apple Plists to Preference folder within backup haha
-	cp -r -f /var/mobile/Library/SpringBoard/IconState.plist $backupLocation/IconLayout/IconState.plist		#copy IconState Plist to IconLayout folder within backup
-	echo ""
-	echo "Succeeded!"
+shopt -s extglob # "Shell option set extglob" https://www.linuxjournal.com/content/bash-extended-globbing 
+
+# -----------------------\
+
+one() { # Function that backs-up the current preferences
+	set -f # "Disable file name generation (globbing)."
+	# echo "Sample text, make me into a pretty banner."
 	
-	pause
-}
-
-two(){		#Restore backup functions
-	echo " "
-	echo "Available Backups:"
-	echo " "
-	ls $flasbackDir/Backups/		#List all Backup Folders which match their names
-	echo " "
-	read -p "[!]Choose a Backup: " selectedBackup		#Let user select which backup
-	if [[ $selectedBackup = "" ]]
-	then
-		echo "No backup selected!"
-		pause
-	fi
-	selectedLocation=$flasbackDir"/Backups/"$selectedBackup		#uses variable to determine backup to use
-	autoBackupLocation=$flasbackDir"/Backups/AutoBackup_"$(date '+%d-%m-%Y_%H:%M:%S')	#Sets autobackup location with date and time
-	mkdir $autoBackupLocation		#Creates autobackup folder
-	mkdir $autoBackupLocation/Preferences		#Creates autobackup Preference Folder
-	mkdir $autoBackupLocation/IconLayout		#Creates autobackup Preference Folder
-	echo ""
-	echo "Moving current Preferences to "$autoBackupLocation"..."
-	cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $autoBackupLocation/Preferences/		#Copy copy all non-apple Plists to Preference folder within autobackup haha
-	cp -r -f /var/mobile/Library/SpringBoard/IconState.plist $autoBackupLocation/IconLayout/IconState.plist		#copy IconState Plist to IconLayout folder within backup
-	echo " "
-	echo "Copying Backup to appropriate system directories..."
-	cp -r $selectedLocation/Preferences/*.plist /var/mobile/Library/Preferences/		#Copy all Plists from backup Preference folder to System Preferences
-	cp $selectedLocation/IconLayout/IconState.plist /var/mobile/Library/SpringBoard/IconState.plist		#Copy all Plists from backup Preference folder to System Icon layout
-	echo "Rebuilding UI cache and Killing SpringBoard..."
-	uicache		#Rebuilds UI Cache - hopefully this doesn't break anything.
-	read -p "[!]Press enter one more time, please."
-	uicache
-	echo "Thanks for using FlashBack!"
-	killall SpringBoard
-	pause
-}
-
-three(){
-echo " "
-	echo "Available Backups:"
-	echo " "
-	ls $flasbackDir/Backups/		#Lists all backups
-	echo " "
-	read -p "[!]Choose a Backup: " deleteBackup		#User selects backup to delete
-	if [[ $deleteBackup = "" ]]
-	then
-		echo "No backup deleted."
-		pause
-	fi
-	deleteLocation=$flasbackDir"/Backups/"$deleteBackup	#location from selected backup
-	echo "Deleting "$deleteBackup"..."
-	rm -r $deleteLocation		#delete backup folder
-	pause
-}
-
-four(){
-	echo ""
-	read -p "[!]Are you sure you want to delete all autobackups? (y/n): " shouldDeleteAB
-	if [[ $shouldDeleteAB = "y" ]]
-	then
-		echo "Deleting all autobackups..."
-		rm -r $flasbackDir/Backups/AutoBackup*		#Delete all folders that start with AutoBackup
+	TEMPBACKUPNAME=
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
+	# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+	TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/} # Stop bad inputs
+	if [[ $TEMPBACKUPNAME = "" ]] ; then
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mBad or no input... Using $BACKUPNAME instead\e[0m"
 	else
-		echo "Not deleting autobackups!"
-	fi
-	pause
-}
+		# TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/}
+		BACKUPNAME=$TEMPBACKUPNAME; fi
+	# //////////////////////////////////
+	set +f
+	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
+	$DEBUG mkdir -p $BACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying to $BACKUPLOCATION\e[0m"
+	
+	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
+	$DEBUG cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
+	$DEBUG cp -rf /var/mobile/Library/SpringBoard/IconState.plist $BACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"		#copy IconState Plist to IconLayout folder within backup
+	
+	# |||||||||||||||||||||||||||||||||||
+	if [[ ! $STATUS = "" ]] ; then
+		echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
+		exit 1 ; fi # TODO MCApollo: Make a report to developer function.
+	# //////////////////////////////////
+	
+	echo -e "\n\e[40m Success! \e[0m \n"
+	pause ;}
 
-five(){
-	echo " "
-	echo "Available Backups:"
-	echo " "
-	ls $flasbackDir/Backups/		#Lists all backups
-	echo " "
+# -----------------------\
+
+two() { # Restore backups made with function one
+
+	# TODO: MCApollo
+	# Check if any backups exist before doing this.
+	# We softlock if we don't have any backups
+	
+	echo -e "\n\e[40m Available Backups: \e[0m \n"
+	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" ; done
+	 
+	SELECTBACKUP=
+	while [[ $SELECTBACKUP = "" ]] ; do
+		set -f
+		unset RESET
+		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " SELECTBACKUP
+		SELECTBACKUP=${SELECTBACKUP//[^a-zA-Z0-9-.]/}
+		if [[ $SELECTBACKUP = "" ]] ; then
+			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" 
+			RESET="YES"; fi
+		if [[ ! -d $FLASHBACKDIR/Backups/$SELECTBACKUP ]] && [[ -z ${RESET+x} ]]  ; then
+                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
+                        SELECTBACKUP="" ; fi
+		
+		set +f ; done
+		
+	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
+	AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
+	
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
+	
+	$DEBUG mkdir -p $AUTOBACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	$DEBUG cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
+	$DEBUG cp -rf /var/mobile/Library/SpringBoard/IconState.plist $AUTOBACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"
+	
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying Backup to appropriate system directories...\e[0m"
+	
+	$DEBUG cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
+	$DEBUG cp $SELECTLOCATION/IconLayout/IconState.plist /var/mobile/Library/SpringBoard/IconState.plist || STATUS="cp failed"
+	
+	echo -e "\n\e[0;100m[*]\e[0m \e[40mRebuilding UICache...\e[0m"
+	
+	$DEBUG uicache || STATUS="uicache failed"
+	#$DEBUG uicache || STATUS="uicache failed" # Doing it twice for no reason?
+	
+	if [[ ! $STATUS = "" ]] ; then
+	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
+	exit 1 ; fi # TODO: Make a report to developer function.
+	
+	if [ -z ${SSH_TTY+x} ] ; then # Should we kill SpringBoard or not?
+		# This is NewTerm
+		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
+		$DEBUG killall -9 SpringBoard && exit 0 # Kill the script.
+	else
+		# This is a SSH Session
+		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
+		$DEBUG killall -9 SpringBoard
+	fi
+	pause ;}
+	
+three(){ # Function that deletes backups
+	echo -e "\n\e[40m Available Backps: \e[0m \n"
+	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" ; done
+		
+	DELETEBACKUP=
+	while [[ $DELETEBACKUP = "" ]] ; do
+                unset RESET
+                set -f
+                read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
+                DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
+               if [[ $DELETEBACKUP = "" ]]; then
+                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m" 
+                                RESET="YES" ; fi
+               if [[ ! -d $DELETEBACKUP ]] && [[ -z ${RESET+x} ]]  ; then
+                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
+                        DELETEBACKUP="" ; fi
+               set +f ; done
+	DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
+	
+	
+	DELETECP=
+	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete this backup?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
+	read -p "-----> " DELETECP
+	if [[ $DELETECP = "FLASHBACK" ]]
+	then
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
+		$DEBUG rm -r $DELETELOCATION
+	else
+	echo -e "\n\e[0;100m[!]\e[0m \e[40mNot deleting $DELETELOCATION\e[0m"; fi
+	
+	pause ;}
+
+four(){ # Function that deletes autobackups made in function two
+	DELETEAB=
+	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete all AutoBackups?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
+	read -p "-----> " DELETEAB
+	if [[ $DELETEAB = "FLASHBACK" ]]
+	then
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting all autobackups...\e[0m"
+		$DEBUG rm -r $FLASHBACKDIR/Backups/AutoBackup*
+	else
+		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"; fi
+	pause ;}
+	
+five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. - Apollo
+	echo -e "\n\e[40m Available Backps: \e[0m \n"
+	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
+		echo -e "\e[40m ----> \e[0m $i" ; done
 	read -p "[!]Choose a Backup: " packageBackup		#User selects backup to package, hopefully
 	read -p "[!]Enter Your UserName: " userName		#Enter the name of the setup creator
 	read -p "[!]Enter Your Email: " userEmail		#Enter the name of the setup creator
 	read -p "[!]Enter A Short Description: " userDesc		#Enter a description
 	
+	# TODO: MCApollo
+	# Clean the input, wildcard (*) makes it game over.
 	
 	echo " "
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -134,9 +226,16 @@ five(){
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		echo " "
 		read -p "[!]Staring automatic mode. A list of installed packages will appear in a moment. Use that list to select which packages are dependancies. Press enter to proceed."
-		apt-mark auto "gsc*" &> /dev/null
+		apt-mark auto "gsc*" &> /dev/null # || STATUS="SEG FAULT" or STATUS="apt-mark failed"
+		# For some reason, apt likes to seg fault. Maybe due to too much memory is being used?
 		echo " "
-		apt-mark showmanual
+		apt-mark showmanual # || STATUS="SEG FAULT"
+		
+		# TODO: MCApollo
+		# Copy paste the STATUS check and exit if seg fault.
+		# Or better yet, the exit code is 139 if it's a seg fault.
+		# Use the exit code to see if apt seg fault; exit or try again once.
+		
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		echo ""
 		read -p "[!]Please copy all desired dependancies from above EXACTLY as they are displayed. Separate them with a comma and a space (, ): " userSetDependancies
@@ -146,19 +245,22 @@ five(){
 	
 	echo ""
 	echo "Creating working directory..."
-	mkdir $flasbackDir/working
-	workingDir=$flasbackDir/working/$packageBackup
+	mkdir $FLASHBACKDIR/working
+	workingDir=$FLASHBACKDIR/working/$packageBackup
 	echo "Creating debian layout..."
-	mkdir $workingDir
+	mkdir $workingDir # Here to-
 	mkdir $workingDir/DEBIAN/
 	mkdir $workingDir/Library/
 	mkdir $workingDir/Library/FlashBack/
-	mkdir $workingDir/Library/FlashBack/Backups/
-	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup
+	mkdir $workingDir/Library/FlashBack/Backups/ 
+	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup # Here, is not need
+	
+	# mkdir -p $workingDir/Library/FlashBack/Backups/$packageBackup
+	# $DEBUG mkdir -p $workingDir$FLASHBACKDIR/Backups/$packageBackup # Correct answer; you're hard-coding /Library/FlashBack
 
 	echo "Copying backup to debian format..."
 	excludeControl="!(control*)"
-	cp -r $flasbackDir"/Backups/"$packageBackup/$excludeControl $workingDir/Library/FlashBack/Backups/$packageBackup/
+	cp -r $FLASHBACKDIR"/Backups/"$packageBackup/$excludeControl $workingDir/Library/FlashBack/Backups/$packageBackup/
 	
 	if [[ $autoMode = "yes" ]]
 	then
@@ -198,14 +300,22 @@ EOF
 	echo "Packaging DEB..."
 	dpkg-deb -Zgzip -b $workingDir
 	echo "Moving DEB..."
-	cp $workingDir.deb $flasbackDir
+	cp $workingDir.deb $FLASHBACKDIR
 	echo "Cleaning working directory..."
-	rm -r -f $flasbackDir/working
+	rm -r -f $FLASHBACKDIR/working # Use /tmp 
 	echo " "
-	echo "The DEB can be found in "$flasbackDir"/"$packageBackup".deb"
+	echo "The DEB can be found in "$FLASHBACKDIR"/"$packageBackup".deb"
+
+
+# TODO MCApollo
+# Use dpkg-deb or dpkg to make sure it's a vaild package. (Maybe extract it?) 
 
 	pause
 }
+
+# TODO Idea: MCApollo
+# Get the amount of $COLUMNS and $LINES, scale the UI base on that information
+# For example, (( ~ X $COLUMNS)) into a VAR and then echo $VAR instead of hard-coding "~~~~~~~~~~~"
 
 show_menus() {
 	clear
@@ -237,6 +347,7 @@ read_options(){
 	esac
 }
 
+tests
 while true
 do
  	shopt -s extglob
