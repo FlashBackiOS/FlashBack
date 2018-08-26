@@ -128,6 +128,7 @@ two() { # Restore backups made with function one
 	echo -e "\n\e[0;100m[*]\e[0m \e[40mRebuilding UICache...\e[0m"
 	
 	uicache || STATUS="uicache failed"
+	killall cfprefsd #Clear settings caches - thanks to Grant/NewD
 	#$DEBUG uicache || STATUS="uicache failed" # Doing it twice for no reason?
 	
 	if [[ ! $STATUS = "" ]] ; then
