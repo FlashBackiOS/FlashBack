@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# MCApollo / Flashback
-
 # _______________             ______ ______              ______  
 # ___  ____/__  /_____ __________  /____  /_______ _________  /__
 # __  /_   __  /_  __ `/_  ___/_  __ \_  __ \  __ `/  ___/_  //_/
@@ -30,7 +28,7 @@ DELETESELECT=
 # echo "Report the dev if this happens more than once"
 # exit 1 ; fi ;} # Kill the script
 
-tests() { # ------------\
+tests() { 
 if [ ! $(id -u) = "0" ] ; then # root check
 	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mMust be \e[4;37mroot\e[0m \n\e[1;31m\e[0;100m[*]\e[0m Current User is\e[0m \e[4;37m$USER\e[0m\n"
 exit 1 ; fi
@@ -40,7 +38,7 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 	read -rp "	[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
 		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
 		 then 	# Do it.
-		 	$DEBUG mkdir -p $FLASHBACKDIR/Backups || exit 1
+		 	mkdir -p $FLASHBACKDIR/Backups || exit 1
                  else 	# or Abort.
 		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
     			exit 1; fi; fi ;}
@@ -58,26 +56,24 @@ shopt -s extglob # "Shell option set extglob" https://www.linuxjournal.com/conte
 
 one() { # Function that backs-up the current preferences
 	set -f # "Disable file name generation (globbing)."
-	# echo "Sample text, make me into a pretty banner."
 	
 	TEMPBACKUPNAME=
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
-	# \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+	
 	TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/} # Stop bad inputs
 	if [[ $TEMPBACKUPNAME = "" ]] ; then
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mBad or no input... Using $BACKUPNAME instead\e[0m"
 	else
-		# TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/}
+		TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/}
 		BACKUPNAME=$TEMPBACKUPNAME; fi
-	# //////////////////////////////////
 	set +f
 	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
-	$DEBUG mkdir -p $BACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	mkdir -p $BACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying to $BACKUPLOCATION\e[0m"
 	
 	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
-	$DEBUG cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
-	$DEBUG cp -rf /var/mobile/Library/SpringBoard/IconState.plist $BACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"		#copy IconState Plist to IconLayout folder within backup
+	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
+	cp -rf /var/mobile/Library/SpringBoard/IconState.plist $BACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"		#copy IconState Plist to IconLayout folder within backup
 	
 	# |||||||||||||||||||||||||||||||||||
 	if [[ ! $STATUS = "" ]] ; then
@@ -120,18 +116,18 @@ two() { # Restore backups made with function one
 	
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
 	
-	$DEBUG mkdir -p $AUTOBACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
-	$DEBUG cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
-	$DEBUG cp -rf /var/mobile/Library/SpringBoard/IconState.plist $AUTOBACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"
+	mkdir -p $AUTOBACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
+	cp -rf /var/mobile/Library/SpringBoard/IconState.plist $AUTOBACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"
 	
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying Backup to appropriate system directories...\e[0m"
 	
-	$DEBUG cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
-	$DEBUG cp $SELECTLOCATION/IconLayout/IconState.plist /var/mobile/Library/SpringBoard/IconState.plist || STATUS="cp failed"
+	cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
+	cp $SELECTLOCATION/IconLayout/IconState.plist /var/mobile/Library/SpringBoard/IconState.plist || STATUS="cp failed"
 	
 	echo -e "\n\e[0;100m[*]\e[0m \e[40mRebuilding UICache...\e[0m"
 	
-	$DEBUG uicache || STATUS="uicache failed"
+	uicache || STATUS="uicache failed"
 	#$DEBUG uicache || STATUS="uicache failed" # Doing it twice for no reason?
 	
 	if [[ ! $STATUS = "" ]] ; then
@@ -141,11 +137,11 @@ two() { # Restore backups made with function one
 	if [ -z ${SSH_TTY+x} ] ; then # Should we kill SpringBoard or not?
 		# This is NewTerm
 		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
-		$DEBUG killall -9 SpringBoard && exit 0 # Kill the script.
+		killall -9 SpringBoard && exit 0 # Kill the script.
 	else
 		# This is a SSH Session
 		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
-		$DEBUG killall -9 SpringBoard
+		killall -9 SpringBoard
 	fi
 	pause ;}
 	
@@ -159,16 +155,15 @@ three(){ # Function that deletes backups
                 unset RESET
                 set -f
                 read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
-                DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
+				DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
+                #DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
                if [[ $DELETEBACKUP = "" ]]; then
                         echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m" 
                                 RESET="YES" ; fi
-               if [[ ! -d $DELETEBACKUP ]] && [[ -z ${RESET+x} ]]  ; then
+               if [[ ! -d $DELETELOCATION ]] && [[ -z ${RESET+x} ]]  ; then
                         echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
                         DELETEBACKUP="" ; fi
                set +f ; done
-	DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
-	
 	
 	DELETECP=
 	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete this backup?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
@@ -176,7 +171,7 @@ three(){ # Function that deletes backups
 	if [[ $DELETECP = "FLASHBACK" ]]
 	then
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
-		$DEBUG rm -r $DELETELOCATION
+		rm -r $DELETELOCATION
 	else
 	echo -e "\n\e[0;100m[!]\e[0m \e[40mNot deleting $DELETELOCATION\e[0m"; fi
 	
@@ -189,7 +184,7 @@ four(){ # Function that deletes autobackups made in function two
 	if [[ $DELETEAB = "FLASHBACK" ]]
 	then
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting all autobackups...\e[0m"
-		$DEBUG rm -r $FLASHBACKDIR/Backups/AutoBackup*
+		rm -r $FLASHBACKDIR/Backups/AutoBackup*
 	else
 		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"; fi
 	pause ;}
@@ -198,114 +193,85 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. -
 	echo -e "\n\e[40m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
 		echo -e "\e[40m ----> \e[0m $i" ; done
-	read -p "[!]Choose a Backup: " packageBackup		#User selects backup to package, hopefully
-	read -p "[!]Enter Your UserName: " userName		#Enter the name of the setup creator
-	read -p "[!]Enter Your Email: " userEmail		#Enter the name of the setup creator
-	read -p "[!]Enter A Short Description: " userDesc		#Enter a description
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mChoose a Backup\e[0m'` > " PACKAGEBACKUP
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter Your UserName\e[0m'` > " USERNAME
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter Your Email\e[0m'` > " USEREMAIL
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter A Short Description\e[0m'` > " USERDESC
 	
 	# TODO: MCApollo
 	# Clean the input, wildcard (*) makes it game over.
-	
-	echo " "
-	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	echo " "
-	echo "Would you like to specify dependancies?"
-	echo "If so, it's recommended to use iCleaner Pro to clean up unused preference files before you start."
-	echo " "
-	echo "Automatic: You select which packages are dependancies, for a streamlined installation."
-	echo "This is highly recommended if you intend to host your setup on a repo, or share with other users."
-	echo ""
-	echo "Manual: Dependancies are not set for users, they must install the tweaks themselves."
-	echo "This is recommended if you plan to use this setup personally."
-	echo " "
-	read -p "[!]Type 'yes' to proceed in automatic mode, press enter to use manual mode: " autoMode		#User will specify which packages are backed up and depended upon
+	echo -e "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nWould you like to specify dependancies?\nIf so, it's recommended to use iCleaner Pro to clean up unused preference files before you start.\n\nAutomatic: You select which packages are dependancies, for a streamlined installation.\nThis is highly recommended if you intend to host your setup on a repo, or share with other users.\n\nManual: Dependancies are not set for users, they must install the tweaks themselves.\nThis is recommended if you plan to use this setup personally.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mWould you like to proceed in automatic mode? (yes/no)\e[0m'` > " autoMode
 	
 	if [[ $autoMode = "yes" ]]
 	then
-		echo " "
-		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-		echo " "
-		read -p "[!]Staring automatic mode. A list of installed packages will appear in a moment. Use that list to select which packages are dependancies. Press enter to proceed."
-		apt-mark auto "gsc*" &> /dev/null # || STATUS="SEG FAULT" or STATUS="apt-mark failed"
+		read -p "`echo -e '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\e[0;100m[!]\e[0m \e[40mStaring automatic mode. A list of installed packages will appear in a moment.\nUse that list to select which packages are dependancies. Press enter to proceed.\e[0m'` > "
+		apt-mark auto "gsc*" &> /dev/null || STATUS="apt-mark failed"
 		# For some reason, apt likes to seg fault. Maybe due to too much memory is being used?
-		echo " "
-		apt-mark showmanual # || STATUS="SEG FAULT"
+		echo -e "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+		apt-mark showmanual || STATUS="SEG FAULT"
 		
 		# TODO: MCApollo
 		# Copy paste the STATUS check and exit if seg fault.
 		# Or better yet, the exit code is 139 if it's a seg fault.
 		# Use the exit code to see if apt seg fault; exit or try again once.
 		
-		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-		echo ""
-		read -p "[!]Please copy all desired dependancies from above EXACTLY as they are displayed. Separate them with a comma and a space (, ): " userSetDependancies
+		read -p "`echo -e '~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\e[0;100m[!]\e[0m \e[40mPlease copy all desired dependancies from above EXACTLY as they are displayed. Separate them with a comma and a space (, )\e[0m'` > " USERSETDEPENDENCIES
 	fi
 	
-	
-	
-	echo ""
-	echo "Creating working directory..."
-	mkdir $FLASHBACKDIR/working
-	workingDir=$FLASHBACKDIR/working/$packageBackup
+	echo -e "\nCreating working directory..."
+	mkdir $FLASHBACKDIR/tmp
+	WORKINGDIR=$FLASHBACKDIR/tmp/$PACKAGEBACKUP
 	echo "Creating debian layout..."
-	mkdir $workingDir # Here to-
-	mkdir $workingDir/DEBIAN/
-	mkdir $workingDir/Library/
-	mkdir $workingDir/Library/FlashBack/
-	mkdir $workingDir/Library/FlashBack/Backups/ 
-	mkdir $workingDir/Library/FlashBack/Backups/$packageBackup # Here, is not need
+	mkdir $WORKINGDIR
+	mkdir $WORKINGDIR/DEBIAN
 	
-	# mkdir -p $workingDir/Library/FlashBack/Backups/$packageBackup
-	# $DEBUG mkdir -p $workingDir$FLASHBACKDIR/Backups/$packageBackup # Correct answer; you're hard-coding /Library/FlashBack
-
-	echo "Copying backup to debian format..."
-	excludeControl="!(control*)"
-	cp -r $FLASHBACKDIR"/Backups/"$packageBackup/$excludeControl $workingDir/Library/FlashBack/Backups/$packageBackup/
+	mkdir -p $WORKINGDIR$FLASHBACKDIR/Backups/$PACKAGEBACKUP # Correct answer; you're hard-coding /Library/FlashBack
+	
+	echo -e "\nCopying backup to debian format..."
+	cp -r $FLASHBACKDIR"/Backups/"$PACKAGEBACKUP/!(control*) $WORKINGDIR/Library/FlashBack/Backups/$PACKAGEBACKUP/
 	
 	if [[ $autoMode = "yes" ]]
 	then
 
-cat > $workingDir/DEBIAN/control <<EOF
-
-Package: com.$userName.$packageBackup
-Name: $backupName
-Depends: com.mpg13.FlashBack, $userSetDependancies
+cat > $WORKINGDIR/DEBIAN/control <<EOF
+Package: com.$USERNAME.$PACKAGEBACKUP
+Name: $PACKAGEBACKUP
+Depends: com.mpg13.FlashBack, $USERSETDEPENDENCIES
 architecture: iphoneos-arm
 Version:1.0
-Description: $userDesc
+Description: $USERDESC
+Depiction: https://flashback.github.io/depicts/com.$USERNAME.$PACKAGEBACKUP.html
 Maintainer: MPG13 <micahplacido@gmail.com>
-Author: $userName <$userEmail>
+Author: $USERNAME <$USEREMAIL>
 Section: Addons (FlashBack)
-
 EOF
 
 	else
 	
-cat > $backupLocation/control <<EOF
-
-Package: com.$userName.$backupName
-Name: $backupName
+cat > $WORKINGDIR/DEBIAN/control <<EOF
+Package: com.$USERNAME.$PACKAGEBACKUP
+Name: $PACKAGEBACKUP
 Depends: com.mpg13.FlashBack
 architecture: iphoneos-arm
 Version:1.0
-Description: $userDesc
+Description: $USERDESC
+Depiction: https://flashback.github.io/depicts/com.$USERNAME.$PACKAGEBACKUP.html
 Maintainer: MPG13 <micahplacido@gmail.com>
-Author: $userName <$userEmail>
+Author: $USERNAME <$USEREMAIL>
 Section: Addons (FlashBack)
-
 EOF
 
 	fi
 	
 	echo "Packaging DEB..."
-	dpkg-deb -Zgzip -b $workingDir
+	dpkg-deb -Zgzip -b $WORKINGDIR
 	echo "Moving DEB..."
-	cp $workingDir.deb $FLASHBACKDIR
+	cp $WORKINGDIR.deb $FLASHBACKDIR
 	echo "Cleaning working directory..."
-	rm -r -f $FLASHBACKDIR/working # Use /tmp 
-	echo " "
-	echo "The DEB can be found in "$FLASHBACKDIR"/"$packageBackup".deb"
-
+	rm -r -f $FLASHBACKDIR/tmp
+	
+	echo -e "\nThe DEB can be found in "$FLASHBACKDIR"/"com.$USERNAME.$PACKAGEBACKUP".deb"
 
 # TODO MCApollo
 # Use dpkg-deb or dpkg to make sure it's a vaild package. (Maybe extract it?) 
@@ -319,23 +285,19 @@ EOF
 
 show_menus() {
 	clear
-	echo "~~~~~~~~~~~~~~~~~~~~~"	
-	echo "	FlashBack "
-	echo " This software is in"
-	echo " BETA. Use it at your"
-	echo "     own risk!" 
-	echo "~~~~~~~~~~~~~~~~~~~~~"
-	echo "1. Backup Current Preferences"
-	echo "2. Restore Backup"
-	echo "3. Delete Backups"
-	echo "4. Delete AutoBackups"
-	echo "5. Package Backup to DEB"
-	echo "6. Quit"
+	echo -e "   _____________________ \n  |  ___      ___       |\n  | | __|    | _ )      |\n  | | _|     | _ \      |\n  | |_| LASH |___/ACK   |\n  |_____________________|"
+	echo -e "\n\e[1;31m   When inputting backup\n   names,use plaintext\n   and numbers ONLY!\n   Special characters\n   may result in dangerous\n   side effects!\e[0m\n"
+	echo -e "\e[0;100m[1.]\e[0m \e[40m Backup Current Preferences\e[0m"
+	echo -e "\e[0;100m[2.]\e[0m \e[40m Restore Backup\e[0m"
+	echo -e "\e[0;100m[3.]\e[0m \e[40m Delete Backups\e[0m"
+	echo -e "\e[0;100m[4.]\e[0m \e[40m Delete AutoBackups\e[0m"
+	echo -e "\e[0;100m[5.]\e[0m \e[40m Package Backup to DEB\e[0m"
+	echo -e "\e[0;100m[6.]\e[0m \e[40m Quit\e[0m"
 }
 
 read_options(){
 	local choice
-	read -p "[!]Enter choice [ 1 - 6] " choice
+	read -p "`echo -e '\e[0;100m[!]\e[0m \e[40mEnter choice [1 - 6]\e[0m'` > " choice
 	case $choice in
 		1) one ;;
 		2) two ;;
