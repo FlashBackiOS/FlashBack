@@ -5,7 +5,7 @@ Version: 1.1
 Architecture: iphoneos-arm
 Description: Change the way we do setups.
 Homepage: https://flashback.github.io
-Depiction: https://flashback.github.io/depicts/com.mpg13.flashback.html
+Depiction: https://mpg13.github.io/repo/depicts/flashback.html
 Maintainer: MPG13 <micahplacido@gmail.com>
 Author: MPG13 <micahplacido@gmail.com>
 Section: Tweaks
