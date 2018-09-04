@@ -46,7 +46,7 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 # -----------------------\
 
 pause(){
-	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[40mPress enter to continue...\e[0m'`" # read has a timeout function that could be used to advance the script by its own.
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[7mPress enter to continue...\e[0m'`" # read has a timeout function that could be used to advance the script by its own.
 	echo -e "\n" ;}
 	
 # -----------------------\ 
@@ -59,22 +59,21 @@ one() { # Function that backs-up the current preferences
 	set -f # "Disable file name generation (globbing)."
 	
 	TEMPBACKUPNAME=
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mEnter backup name...\e[0m'` > " TEMPBACKUPNAME # BACKUPNAME has the date
 	
 	TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/} # Stop bad inputs
 	if [[ $TEMPBACKUPNAME = "" ]] ; then
-		echo -e "\n\e[0;100m[!]\e[0m \e[40mBad or no input... Using $BACKUPNAME instead\e[0m"
+		echo -e "\n\e[0;100m[!]\e[0m \e[7mBad or no input... Using $BACKUPNAME instead\e[0m"
 	else
 		TEMPBACKUPNAME=${TEMPBACKUPNAME//[^a-zA-Z0-9-.]/}
 		BACKUPNAME=$TEMPBACKUPNAME; fi
 	set +f
 	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
-	mkdir -p $BACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
-	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying to $BACKUPLOCATION\e[0m"
+	mkdir -p $BACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
+	echo -e "\n\e[0;100m[!]\e[0m \e[7mCopying to $BACKUPLOCATION\e[0m"
 	
-	#find -iname '/var/mobile/Library/Preferences/*.plist' -not -name com.apple.*.plist -exec cp {} $backupLocation/Preferences/ \;		
 	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
-	cp -rf /var/mobile/Library/SpringBoard/IconState.plist $BACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"		#copy IconState Plist to IconLayout folder within backup
+	cp -rf /var/mobile/Library/SpringBoard/*(Icon|Background)* $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
 	
 	# |||||||||||||||||||||||||||||||||||
 	if [[ ! $STATUS = "" ]] ; then
@@ -82,7 +81,7 @@ one() { # Function that backs-up the current preferences
 		exit 1 ; fi # TODO MCApollo: Make a report to developer function.
 	# //////////////////////////////////
 	
-	echo -e "\n\e[40m Success! \e[0m \n"
+	echo -e "\n\e[7m Success! \e[0m \n"
 	pause ;}
 
 # -----------------------\
@@ -93,15 +92,15 @@ two() { # Restore backups made with function one
 	# Check if any backups exist before doing this.
 	# We softlock if we don't have any backups
 	
-	echo -e "\n\e[40m Available Backups: \e[0m \n"
+	echo -e "\n\e[7m Available Backups: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
-		echo -e "\e[40m ----> \e[0m $i" ; done
+		echo -e "\e[7m ----> \e[0m $i" ; done
 	 
 	SELECTBACKUP=
 	while [[ $SELECTBACKUP = "" ]] ; do
 		set -f
 		unset RESET
-		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " SELECTBACKUP
+		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mSelect Backup\e[0m'` -> " SELECTBACKUP
 		SELECTBACKUP=${SELECTBACKUP//[^a-zA-Z0-9-.]/}
 		if [[ $SELECTBACKUP = "" ]] ; then
 			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" 
@@ -115,22 +114,22 @@ two() { # Restore backups made with function one
 	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
 	AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
 	
-	echo -e "\n\e[0;100m[!]\e[0m \e[40mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
+	echo -e "\n\e[0;100m[!]\e[0m \e[7mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
 	
-	mkdir -p $AUTOBACKUPLOCATION/{Preferences,IconLayout} || STATUS="mkdir failed"
+	mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
 	cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
-	cp -rf /var/mobile/Library/SpringBoard/IconState.plist $AUTOBACKUPLOCATION/IconLayout/IconState.plist || STATUS="cp failed"
+	cp -r /var/mobile/Library/SpringBoard/*(Icon|Background)*.plist $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"
 	
-	echo -e "\n\e[0;100m[!]\e[0m \e[40mCopying Backup to appropriate system directories...\e[0m"
+	echo -e "\n\e[0;100m[!]\e[0m \e[7mCopying Backup to appropriate system directories...\e[0m"
 	
 	cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
-	cp $SELECTLOCATION/IconLayout/IconState.plist /var/mobile/Library/SpringBoard/IconState.plist || STATUS="cp failed"
+	cp -r $SELECTLOCATION/SBFolder/* /var/mobile/Library/SpringBoard/ || STATUS="cp failed"
 	
-	echo -e "\n\e[0;100m[*]\e[0m \e[40mRebuilding UICache...\e[0m"
+	echo -e "\n\e[0;100m[*]\e[0m \e[7mRebuilding image cache...\e[0m"
 	
 	uicache || STATUS="uicache failed"
+	recache --no respring || STATUS="recache failed"
 	killall cfprefsd #Clear settings caches - thanks to Grant/NewD
-	#$DEBUG uicache || STATUS="uicache failed" # Doing it twice for no reason?
 	
 	if [[ ! $STATUS = "" ]] ; then
 	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
@@ -148,15 +147,15 @@ two() { # Restore backups made with function one
 	pause ;}
 	
 three(){ # Function that deletes backups
-	echo -e "\n\e[40m Available Backps: \e[0m \n"
+	echo -e "\n\e[7m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
-		echo -e "\e[40m ----> \e[0m $i" ; done
+		echo -e "\e[7m ----> \e[0m $i" ; done
 		
 	DELETEBACKUP=
 	while [[ $DELETEBACKUP = "" ]] ; do
                 unset RESET
                 set -f
-                read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mSelect Backup\e[0m'` -> " DELETEBACKUP
+                read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mSelect Backup\e[0m'` -> " DELETEBACKUP
 				DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
                 #DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
                if [[ $DELETEBACKUP = "" ]]; then
@@ -172,10 +171,10 @@ three(){ # Function that deletes backups
 	read -p "-----> " DELETECP
 	if [[ $DELETECP = "FLASHBACK" ]]
 	then
-		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting $DELETELOCATION\e[0m"
+		echo -e "\n\e[0;100m[!]\e[0m \e[7mDeleting $DELETELOCATION\e[0m"
 		rm -r $DELETELOCATION
 	else
-	echo -e "\n\e[0;100m[!]\e[0m \e[40mNot deleting $DELETELOCATION\e[0m"; fi
+	echo -e "\n\e[0;100m[!]\e[0m \e[7mNot deleting $DELETELOCATION\e[0m"; fi
 	
 	pause ;}
 
@@ -185,29 +184,29 @@ four(){ # Function that deletes autobackups made in function two
 	read -p "-----> " DELETEAB
 	if [[ $DELETEAB = "FLASHBACK" ]]
 	then
-		echo -e "\n\e[0;100m[!]\e[0m \e[40mDeleting all autobackups...\e[0m"
+		echo -e "\n\e[0;100m[!]\e[0m \e[7mDeleting all autobackups...\e[0m"
 		rm -r $FLASHBACKDIR/Backups/AutoBackup*
 	else
-		echo -e "\n\e[0;100m[!]\e[0m \e[40mExiting...\e[0m"; fi
+		echo -e "\n\e[0;100m[!]\e[0m \e[7mExiting...\e[0m"; fi
 	pause ;}
 	
 five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. - Apollo
-	echo -e "\n\e[40m Available Backps: \e[0m \n"
+	echo -e "\n\e[7m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
-		echo -e "\e[40m ----> \e[0m $i" ; done
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mChoose a Backup\e[0m'` > " PACKAGEBACKUP
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter Your UserName\e[0m'` > " USERNAME
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter Your Email\e[0m'` > " USEREMAIL
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mEnter A Short Description\e[0m'` > " USERDESC
+		echo -e "\e[7m ----> \e[0m $i" ; done
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mChoose a Backup\e[0m'` > " PACKAGEBACKUP
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mEnter Your UserName\e[0m'` > " USERNAME
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mEnter Your Email\e[0m'` > " USEREMAIL
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mEnter A Short Description\e[0m'` > " USERDESC
 	
 	# TODO: MCApollo
 	# Clean the input, wildcard (*) makes it game over.
 	echo -e "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nWould you like to specify dependancies?\nIf so, it's recommended to use iCleaner Pro to clean up unused preference files before you start.\n\nAutomatic: You select which packages are dependancies, for a streamlined installation.\nThis is highly recommended if you intend to host your setup on a repo, or share with other users.\n\nManual: Dependancies are not set for users, they must install the tweaks themselves.\nThis is recommended if you plan to use this setup personally.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[40mWould you like to proceed in automatic mode? (yes/no)\e[0m'` > " autoMode
+	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mWould you like to proceed in automatic mode? (yes/no)\e[0m'` > " autoMode
 	
 	if [[ $autoMode = "yes" ]]
 	then
-		read -p "`echo -e '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\e[0;100m[!]\e[0m \e[40mStaring automatic mode. A list of installed packages will appear in a moment.\nUse that list to select which packages are dependancies. Press enter to proceed.\e[0m'` > "
+		read -p "`echo -e '\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\e[0;100m[!]\e[0m \e[7mStaring automatic mode. A list of installed packages will appear in a moment.\nUse that list to select which packages are dependancies. Press enter to proceed.\e[0m'` > "
 		apt-mark auto "gsc*" &> /dev/null || STATUS="apt-mark failed"
 		# For some reason, apt likes to seg fault. Maybe due to too much memory is being used?
 		echo -e "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -218,7 +217,7 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. -
 		# Or better yet, the exit code is 139 if it's a seg fault.
 		# Use the exit code to see if apt seg fault; exit or try again once.
 		
-		read -p "`echo -e '~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\e[0;100m[!]\e[0m \e[40mPlease copy all desired dependancies from above EXACTLY as they are displayed. Separate them with a comma and a space (, )\e[0m'` > " USERSETDEPENDENCIES
+		read -p "`echo -e '~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\e[0;100m[!]\e[0m \e[7mPlease copy all desired dependancies from above EXACTLY as they are displayed. Separate them with a comma and a space (, )\e[0m'` > " USERSETDEPENDENCIES
 	fi
 	
 	echo -e "\nCreating working directory..."
@@ -289,17 +288,17 @@ show_menus() {
 	clear
 	echo -e "   _____________________ \n  |  ___      ___       |\n  | | __|    | _ )      |\n  | | _|     | _ \      |\n  | |_| LASH |___/ACK   |\n  |_____________________|"
 	echo -e "\n\e[1;31m   When inputting backup\n   names,use plaintext\n   and numbers ONLY!\n   Special characters\n   may result in dangerous\n   side effects!\e[0m\n"
-	echo -e "\e[0;100m[1.]\e[0m \e[40m Backup Current Preferences\e[0m"
-	echo -e "\e[0;100m[2.]\e[0m \e[40m Restore Backup\e[0m"
-	echo -e "\e[0;100m[3.]\e[0m \e[40m Delete Backups\e[0m"
-	echo -e "\e[0;100m[4.]\e[0m \e[40m Delete AutoBackups\e[0m"
-	echo -e "\e[0;100m[5.]\e[0m \e[40m Package Backup to DEB\e[0m"
-	echo -e "\e[0;100m[6.]\e[0m \e[40m Quit\e[0m"
+	echo -e "\e[0;100m[1.]\e[0m \e[7m Backup Current Preferences\e[0m"
+	echo -e "\e[0;100m[2.]\e[0m \e[7m Restore Backup\e[0m"
+	echo -e "\e[0;100m[3.]\e[0m \e[7m Delete Backups\e[0m"
+	echo -e "\e[0;100m[4.]\e[0m \e[7m Delete AutoBackups\e[0m"
+	echo -e "\e[0;100m[5.]\e[0m \e[7m Package Backup to DEB\e[0m"
+	echo -e "\e[0;100m[6.]\e[0m \e[7m Quit\e[0m"
 }
 
 read_options(){
 	local choice
-	read -p "`echo -e '\e[0;100m[!]\e[0m \e[40mEnter choice [1 - 6]\e[0m'` > " choice
+	read -p "`echo -e '\e[0;100m[!]\e[0m \e[7mEnter choice [1 - 6]\e[0m'` > " choice
 	case $choice in
 		1) one ;;
 		2) two ;;

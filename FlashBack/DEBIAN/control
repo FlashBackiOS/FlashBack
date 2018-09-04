@@ -1,7 +1,7 @@
 Package: com.mpg13.FlashBack
 Name: FlashBack
 Depends: mobilesubstrate
-Version: 1.1
+Version: 1.2
 Architecture: iphoneos-arm
 Description: Change the way we do setups.
 Homepage: https://flashback.github.io
@@ -9,3 +9,4 @@ Depiction: https://mpg13.github.io/repo/depicts/flashback.html
 Maintainer: MPG13 <micahplacido@gmail.com>
 Author: MPG13 <micahplacido@gmail.com>
 Section: Tweaks
+Icon: file:///Library/FlashBack/CydiaIcon.png
