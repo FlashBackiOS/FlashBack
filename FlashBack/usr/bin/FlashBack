@@ -1,11 +1,11 @@
 #!/bin/sh
 
 
-# _______________             ______ ______              ______  
+# _______________			 ______ ______			  ______  
 # ___  ____/__  /_____ __________  /____  /_______ _________  /__
 # __  /_   __  /_  __ `/_  ___/_  __ \_  __ \  __ `/  ___/_  //_/
 # _  __/   _  / / /_/ /_(__  )_  / / /  /_/ / /_/ // /__ _  ,<   
-# /_/      /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
+# /_/	  /_/  \__,_/ /____/ /_/ /_//_.___/\__,_/ \___/ /_/|_| 
 # "Backup, restore, and share your iOS setups."
 
 # Notes:
@@ -24,6 +24,9 @@ AUTOBACKUPLOCATION=
 DELETEBACKUP=
 DELETESELECT=
 
+FBVERSION="v1_3"
+PKGVERSION="1.3"
+
 # report(){ # report to dev example function
 # echo "$foo-bar has went wrong"
 # echo "Report the dev if this happens more than once"
@@ -40,9 +43,9 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
 		 then 	# Do it.
 		 	mkdir -p $FLASHBACKDIR/Backups || exit 1
-                 else 	# or Abort.
+				 else 	# or Abort.
 		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
-    			exit 1; fi; fi ;}
+				exit 1; fi; fi ;}
 # -----------------------\
 
 pause(){
@@ -73,7 +76,9 @@ one() { # Function that backs-up the current preferences
 	echo -e "\n\e[0;100m[!]\e[0m \e[7mCopying to $BACKUPLOCATION\e[0m"
 	
 	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
-	cp -rf /var/mobile/Library/SpringBoard/*(Icon|Background)* $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
+	cp -rf /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
+	#cp -rf /var/mobile/Library/SpringBoard/* $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
+	touch $BACKUPLOCATION/$FBVERSION
 	
 	# |||||||||||||||||||||||||||||||||||
 	if [[ ! $STATUS = "" ]] ; then
@@ -106,43 +111,55 @@ two() { # Restore backups made with function one
 			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" 
 			RESET="YES"; fi
 		if [[ ! -d $FLASHBACKDIR/Backups/$SELECTBACKUP ]] && [[ -z ${RESET+x} ]]  ; then
-                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
-                        SELECTBACKUP="" ; fi
+						echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
+						SELECTBACKUP="" ; fi
 		
 		set +f ; done
 		
 	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
-	AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
 	
-	echo -e "\n\e[0;100m[!]\e[0m \e[7mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
+	if [ -f $SELECTLOCATION/$FBVERSION ]
+	then
 	
-	mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
-	cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
-	cp -r /var/mobile/Library/SpringBoard/*(Icon|Background)*.plist $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"
+		AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
+		
+		echo -e "\n\e[0;100m[!]\e[0m \e[7mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
+		
+		mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
+		cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
+		cp -r /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
+		#cp -r /var/mobile/Library/SpringBoard/* $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
+		touch $AUTOBACKUPLOCATION/$FBVERSION
+		
+		echo -e "\n\e[0;100m[!]\e[0m \e[7mCopying Backup to appropriate system directories...\e[0m"
+		
+		cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
+		#cp -r $SELECTLOCATION/SBFolder/@(*Icon*|*Background*|SB*) /var/mobile/Library/SpringBoard/ || STATUS="cp failed"
+		
+		echo -e "\n\e[0;100m[*]\e[0m \e[7mRebuilding image cache...\e[0m"
+		
+		uicache || STATUS="uicache failed"
+		recache --no respring || STATUS="recache failed"
+		killall cfprefsd #Clear settings caches - thanks to Grant/NewD
+		
+		if [[ ! $STATUS = "" ]] ; then
+		echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
+		exit 1 ; fi # TODO: Make a report to developer function.
+		
+		if [ -z ${SSH_TTY+x} ] ; then # Should we kill SpringBoard or not?
+			# This is NewTerm
+			echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
+			killall -9 SpringBoard && exit 0 # Kill the script.
+		else
+			# This is a SSH Session
+			echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
+			killall -9 SpringBoard
+		fi
 	
-	echo -e "\n\e[0;100m[!]\e[0m \e[7mCopying Backup to appropriate system directories...\e[0m"
-	
-	cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
-	cp -r $SELECTLOCATION/SBFolder/* /var/mobile/Library/SpringBoard/ || STATUS="cp failed"
-	
-	echo -e "\n\e[0;100m[*]\e[0m \e[7mRebuilding image cache...\e[0m"
-	
-	uicache || STATUS="uicache failed"
-	recache --no respring || STATUS="recache failed"
-	killall cfprefsd #Clear settings caches - thanks to Grant/NewD
-	
-	if [[ ! $STATUS = "" ]] ; then
-	echo -e "\a\n\e[0;100m[*]\e[0m \e[1;31mSomething went wrong: $STATUS \e[0m\n"
-	exit 1 ; fi # TODO: Make a report to developer function.
-	
-	if [ -z ${SSH_TTY+x} ] ; then # Should we kill SpringBoard or not?
-		# This is NewTerm
-		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
-		killall -9 SpringBoard && exit 0 # Kill the script.
 	else
-		# This is a SSH Session
-		echo -e "\a\n\e[0;100m[!]\e[0m \e[1;31mKilling SpringBoard \e[0m\n\n\e[0;100m Thank you for using Flashback! \e[0m"
-		killall -9 SpringBoard
+	
+		echo -e "\n\e[0;100m[*]\e[0m \e[1;31mIncompatible Backup Version!\e[0m"
+	
 	fi
 	pause ;}
 	
@@ -153,18 +170,18 @@ three(){ # Function that deletes backups
 		
 	DELETEBACKUP=
 	while [[ $DELETEBACKUP = "" ]] ; do
-                unset RESET
-                set -f
-                read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mSelect Backup\e[0m'` -> " DELETEBACKUP
+				unset RESET
+				set -f
+				read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[7mSelect Backup\e[0m'` -> " DELETEBACKUP
 				DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
-                #DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
-               if [[ $DELETEBACKUP = "" ]]; then
-                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m" 
-                                RESET="YES" ; fi
-               if [[ ! -d $DELETELOCATION ]] && [[ -z ${RESET+x} ]]  ; then
-                        echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
-                        DELETEBACKUP="" ; fi
-               set +f ; done
+				#DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
+			   if [[ $DELETEBACKUP = "" ]]; then
+						echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m" 
+								RESET="YES" ; fi
+			   if [[ ! -d $DELETELOCATION ]] && [[ -z ${RESET+x} ]]  ; then
+						echo -e "\n\e[0;100m[*]\e[0m \e[1;31mNo backup with that name exists!\e[0m"
+						DELETEBACKUP="" ; fi
+			   set +f ; done
 	
 	DELETECP=
 	echo -e "\n\e[0;100m[!]\e[0m\e[1;31m Are you REALLY sure you want to delete this backup?\e[0m\n \n\e[1;37mType \"FLASHBACK\" exactly the way it is if you're sure!\e[0m\n"
@@ -240,10 +257,9 @@ Package: com.$USERNAME.$PACKAGEBACKUP
 Name: $PACKAGEBACKUP
 Depends: com.mpg13.FlashBack, $USERSETDEPENDENCIES
 architecture: iphoneos-arm
-Version:1.0
+Version:$PKGVERSION
 Description: $USERDESC
-Depiction: https://flashback.github.io/depicts/com.$USERNAME.$PACKAGEBACKUP.html
-Maintainer: MPG13 <micahplacido@gmail.com>
+Maintainer: $USERNAME <$USEREMAIL>
 Author: $USERNAME <$USEREMAIL>
 Section: Addons (FlashBack)
 EOF
@@ -255,9 +271,8 @@ Package: com.$USERNAME.$PACKAGEBACKUP
 Name: $PACKAGEBACKUP
 Depends: com.mpg13.FlashBack
 architecture: iphoneos-arm
-Version:1.0
+Version:$PKGVERSION
 Description: $USERDESC
-Depiction: https://flashback.github.io/depicts/com.$USERNAME.$PACKAGEBACKUP.html
 Maintainer: MPG13 <micahplacido@gmail.com>
 Author: $USERNAME <$USEREMAIL>
 Section: Addons (FlashBack)
@@ -287,6 +302,7 @@ EOF
 show_menus() {
 	clear
 	echo -e "   _____________________ \n  |  ___      ___       |\n  | | __|    | _ )      |\n  | | _|     | _ \      |\n  | |_| LASH |___/ACK   |\n  |_____________________|"
+	echo -e "\n\e[1;32m   Please read the FAQ\n   in the Cydia package\n   depiction!" 
 	echo -e "\n\e[1;31m   When inputting backup\n   names,use plaintext\n   and numbers ONLY!\n   Special characters\n   may result in dangerous\n   side effects!\e[0m\n"
 	echo -e "\e[0;100m[1.]\e[0m \e[7m Backup Current Preferences\e[0m"
 	echo -e "\e[0;100m[2.]\e[0m \e[7m Restore Backup\e[0m"
