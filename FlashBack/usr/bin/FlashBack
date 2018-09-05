@@ -304,12 +304,12 @@ show_menus() {
 	echo -e "   _____________________ \n  |  ___      ___       |\n  | | __|    | _ )      |\n  | | _|     | _ \      |\n  | |_| LASH |___/ACK   |\n  |_____________________|"
 	echo -e "\n\e[1;32m   Please read the FAQ\n   in the Cydia package\n   depiction!" 
 	echo -e "\n\e[1;31m   When inputting backup\n   names,use plaintext\n   and numbers ONLY!\n   Special characters\n   may result in dangerous\n   side effects!\e[0m\n"
-	echo -e "\e[0;100m[1.]\e[0m \e[7m Backup Current Preferences\e[0m"
-	echo -e "\e[0;100m[2.]\e[0m \e[7m Restore Backup\e[0m"
-	echo -e "\e[0;100m[3.]\e[0m \e[7m Delete Backups\e[0m"
-	echo -e "\e[0;100m[4.]\e[0m \e[7m Delete AutoBackups\e[0m"
-	echo -e "\e[0;100m[5.]\e[0m \e[7m Package Backup to DEB\e[0m"
-	echo -e "\e[0;100m[6.]\e[0m \e[7m Quit\e[0m"
+	echo -e "\e[0;100m[1.]\e[0m Backup Current Preferences"
+	echo -e "\e[0;100m[2.]\e[0m Restore Backup"
+	echo -e "\e[0;100m[3.]\e[0m Delete Backups"
+	echo -e "\e[0;100m[4.]\e[0m Delete AutoBackups"
+	echo -e "\e[0;100m[5.]\e[0m Package Backup to DEB"
+	echo -e "\e[0;100m[6.]\e[0m Quit"
 }
 
 read_options(){
