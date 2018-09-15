@@ -24,7 +24,7 @@ DELETEBACKUP=
 DELETESELECT=
 
 FBVERSION="v1_5"
-PKGVERSION="1.6"
+PKGVERSION="1.5"
 
 # report(){ # report to dev example function
 # echo "$foo-bar has went wrong"
