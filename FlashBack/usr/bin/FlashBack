@@ -1,8 +1,5 @@
 #!/bin/bash
 
-while ((SECONDS < 5*60))
-do
-
 # _______________			 ______ ______			  ______  
 # ___  ____/__  /_____ __________  /____  /_______ _________  /__
 # __  /_   __  /_  __ `/_  ___/_  __ \_  __ \  __ `/  ___/_  //_/
@@ -26,8 +23,8 @@ AUTOBACKUPLOCATION=
 DELETEBACKUP=
 DELETESELECT=
 
-FBVERSION="v1_3"
-PKGVERSION="1.3"
+FBVERSION="v1_5"
+PKGVERSION="1.6"
 
 # report(){ # report to dev example function
 # echo "$foo-bar has went wrong"
@@ -65,7 +62,6 @@ shopt -s extglob # "Shell option set extglob" https://www.linuxjournal.com/conte
 # -----------------------\
 
 one() { # Function that backs-up the current preferences
-	timestarted = SECONDS
 	set -f # "Disable file name generation (globbing)."
 	
 	TEMPBACKUPNAME=
@@ -84,7 +80,6 @@ one() { # Function that backs-up the current preferences
 	
 	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
 	cp -rf /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
-	#cp -rf /var/mobile/Library/SpringBoard/* $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
 	touch $BACKUPLOCATION/$FBVERSION
 	
 	# |||||||||||||||||||||||||||||||||||
