@@ -1,5 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
+while ((SECONDS < 5*60))
+do
 
 # _______________			 ______ ______			  ______  
 # ___  ____/__  /_____ __________  /____  /_______ _________  /__
@@ -49,7 +51,11 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 # -----------------------\
 
 pause(){
-	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" # read has a timeout function that could be used to advance the script by its own.
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" -t 300  # read has a timeout function that could be used to advance the script by its own.
+		exit_status=$?
+		if [[ $exit_status -eq 142 ]]; then
+    		exit 0
+		fi
 	echo -e "\n" ;}
 	
 # -----------------------\ 
@@ -59,6 +65,7 @@ shopt -s extglob # "Shell option set extglob" https://www.linuxjournal.com/conte
 # -----------------------\
 
 one() { # Function that backs-up the current preferences
+	timestarted = SECONDS
 	set -f # "Disable file name generation (globbing)."
 	
 	TEMPBACKUPNAME=
@@ -87,6 +94,7 @@ one() { # Function that backs-up the current preferences
 	# //////////////////////////////////
 	
 	echo -e "\n\e[104m Success! \e[0m \n"
+	
 	pause ;}
 
 # -----------------------\
@@ -128,13 +136,12 @@ two() { # Restore backups made with function one
 		mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
 		cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
 		cp -r /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
-		#cp -r /var/mobile/Library/SpringBoard/* $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
 		touch $AUTOBACKUPLOCATION/$FBVERSION
 		
 		echo -e "\n\e[0;100m[!]\e[0m \e[104mCopying Backup to appropriate system directories...\e[0m"
 		
 		cp -r $SELECTLOCATION/Preferences/*.plist /var/mobile/Library/Preferences/ || STATUS="cp failed"
-		#cp -r $SELECTLOCATION/SBFolder/@(*Icon*|*Background*|SB*) /var/mobile/Library/SpringBoard/ || STATUS="cp failed"
+		cp -r $SELECTLOCATION/SBFolder/* /var/mobile/Library/SpringBoard/ || STATUS="cp failed"
 		
 		echo -e "\n\e[0;100m[*]\e[0m \e[104mRebuilding image cache...\e[0m"
 		
