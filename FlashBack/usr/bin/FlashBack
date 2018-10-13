@@ -23,8 +23,8 @@ AUTOBACKUPLOCATION=
 DELETEBACKUP=
 DELETESELECT=
 
-FBVERSION="v1_5"
-PKGVERSION="1.5"
+FBVERSION="v1_6"
+PKGVERSION="1.6"
 
 # report(){ # report to dev example function
 # echo "$foo-bar has went wrong"
@@ -48,7 +48,7 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 # -----------------------\
 
 pause(){
-	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" -t 300  # read has a timeout function that could be used to advance the script by its own.
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" -t 120  # read has a timeout function that could be used to advance the script by its own.
 		exit_status=$?
 		if [[ $exit_status -eq 142 ]]; then
     		exit 0
@@ -75,11 +75,17 @@ one() { # Function that backs-up the current preferences
 		BACKUPNAME=$TEMPBACKUPNAME; fi
 	set +f
 	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
-	mkdir -p $BACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
+	mkdir -p $BACKUPLOCATION/{Preferences,SBFolder,WidgetsInfo/SBHTML,WidgetsInfo/LocKHTML} || STATUS="mkdir failed"
 	echo -e "\n\e[0;100m[!]\e[0m \e[104mCopying to $BACKUPLOCATION\e[0m"
 	
 	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
 	cp -rf /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
+	for j in $(ls /var/mobile/Library/SBHTML*/config.js) ; do
+		parentname="$(basename "$(dirname "$j"))
+		mkdir $BACKUPLOCATION/WidgetsInfo/LocKHTML/parentname
+		cp -r $j $BACKUPLOCATION/WidgetsInfo/SBHTML/;
+	done
+		
 	touch $BACKUPLOCATION/$FBVERSION
 	
 	# |||||||||||||||||||||||||||||||||||
@@ -121,7 +127,7 @@ two() { # Restore backups made with function one
 		
 	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
 	
-	if [ -f $SELECTLOCATION/$FBVERSION ]
+	if [ -f $SELECTLOCATION/$FBVERSION ] || [ -f $SELECTLOCATION/1.5 ] || [ -f $SELECTLOCATION/1.5.1 ] || [ -f $SELECTLOCATION/1.4 ]
 	then
 	
 		AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
@@ -141,7 +147,7 @@ two() { # Restore backups made with function one
 		echo -e "\n\e[0;100m[*]\e[0m \e[104mRebuilding image cache...\e[0m"
 		
 		uicache || STATUS="uicache failed"
-		recache --no respring || STATUS="recache failed"
+		recache --no respring || echo -e "\n\e[0;100m[*]\e[0m \e[104mAnemone not installed. Proceeding anyway.\e[0m"
 		killall cfprefsd #Clear settings caches - thanks to Grant/NewD
 		
 		if [[ ! $STATUS = "" ]] ; then
@@ -215,7 +221,6 @@ five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. -
 		echo -e " \e[100m---->\e[0m  \e[33m$i\e[0m" ; done
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[104mChoose a Backup\e[0m'` > " PACKAGEBACKUP
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[104mEnter Your UserName\e[0m'` > " USERNAME
-	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[104mEnter Your Email\e[0m'` > " USEREMAIL
 	read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[104mEnter A Short Description\e[0m'` > " USERDESC
 	
 	# TODO: MCApollo
@@ -258,8 +263,8 @@ Depends: com.mpg13.FlashBack, $USERSETDEPENDENCIES
 architecture: iphoneos-arm
 Version:$PKGVERSION
 Description: $USERDESC
-Maintainer: $USERNAME <$USEREMAIL>
-Author: $USERNAME <$USEREMAIL>
+Maintainer: $USERNAME
+Author: $USERNAME
 Section: Addons (FlashBack)
 EOF
 
@@ -272,8 +277,8 @@ Depends: com.mpg13.FlashBack
 architecture: iphoneos-arm
 Version:$PKGVERSION
 Description: $USERDESC
-Maintainer: MPG13 <micahplacido@gmail.com>
-Author: $USERNAME <$USEREMAIL>
+Maintainer: MPG13
+Author: $USERNAME
 Section: Addons (FlashBack)
 EOF
 

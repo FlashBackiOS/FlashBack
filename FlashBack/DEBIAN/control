@@ -1,7 +1,7 @@
-Package: com.mpg13.FlashBack
-Name: FlashBack
+Package: com.mpg13.FlashBackTesting
+Name: FlashBack (BETA, DON'T INSTALL)
 Depends: mobilesubstrate, com.chpwn.iconsupport
-Version: 1.5.1
+Version: 1.6
 Architecture: iphoneos-arm
 Description: Change the way we do setups.
 Homepage: https://flashback.github.io
