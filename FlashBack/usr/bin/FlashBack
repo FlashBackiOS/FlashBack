@@ -23,8 +23,8 @@ AUTOBACKUPLOCATION=
 DELETEBACKUP=
 DELETESELECT=
 
-FBVERSION="v1_6"
-PKGVERSION="1.6"
+BKPVERSION="v1_5"
+PKGVERSION="1.5"
 
 # report(){ # report to dev example function
 # echo "$foo-bar has went wrong"
@@ -75,18 +75,12 @@ one() { # Function that backs-up the current preferences
 		BACKUPNAME=$TEMPBACKUPNAME; fi
 	set +f
 	BACKUPLOCATION=$FLASHBACKDIR/Backups/$BACKUPNAME
-	mkdir -p $BACKUPLOCATION/{Preferences,SBFolder,WidgetsInfo/SBHTML,WidgetsInfo/LocKHTML} || STATUS="mkdir failed"
+	mkdir -p $BACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
 	echo -e "\n\e[0;100m[!]\e[0m \e[104mCopying to $BACKUPLOCATION\e[0m"
 	
 	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
 	cp -rf /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
-	for j in $(ls /var/mobile/Library/SBHTML*/config.js) ; do
-		parentname="$(basename "$(dirname "$j"))
-		mkdir $BACKUPLOCATION/WidgetsInfo/LocKHTML/parentname
-		cp -r $j $BACKUPLOCATION/WidgetsInfo/SBHTML/;
-	done
-		
-	touch $BACKUPLOCATION/$FBVERSION
+	touch $BACKUPLOCATION/$BKPVERSION
 	
 	# |||||||||||||||||||||||||||||||||||
 	if [[ ! $STATUS = "" ]] ; then
@@ -127,7 +121,7 @@ two() { # Restore backups made with function one
 		
 	SELECTLOCATION=$FLASHBACKDIR/Backups/$SELECTBACKUP
 	
-	if [ -f $SELECTLOCATION/$FBVERSION ] || [ -f $SELECTLOCATION/1.5 ] || [ -f $SELECTLOCATION/1.5.1 ] || [ -f $SELECTLOCATION/1.4 ]
+	if [ -f $SELECTLOCATION/$BKPVERSION ]
 	then
 	
 		AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
@@ -137,7 +131,7 @@ two() { # Restore backups made with function one
 		mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder} || STATUS="mkdir failed"
 		cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
 		cp -r /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
-		touch $AUTOBACKUPLOCATION/$FBVERSION
+		touch $AUTOBACKUPLOCATION/$BKPVERSION
 		
 		echo -e "\n\e[0;100m[!]\e[0m \e[104mCopying Backup to appropriate system directories...\e[0m"
 		
@@ -277,7 +271,7 @@ Depends: com.mpg13.FlashBack
 architecture: iphoneos-arm
 Version:$PKGVERSION
 Description: $USERDESC
-Maintainer: MPG13
+Maintainer: $USERNAME
 Author: $USERNAME
 Section: Addons (FlashBack)
 EOF
