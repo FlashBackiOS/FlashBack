@@ -23,7 +23,7 @@ AUTOBACKUPLOCATION=
 DELETEBACKUP=
 DELETESELECT=
 
-BKPVERSION="v1_5"
+BKPVERSION="v2"
 PKGVERSION="1.5"
 
 # report(){ # report to dev example function
@@ -40,15 +40,15 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR/Backups doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
 	read -rp "	[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
 		if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
-		 then 	# Do it.
-		 	mkdir -p $FLASHBACKDIR/Backups || exit 1
-				 else 	# or Abort.
-		 	echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
+			then 	# Do it.
+		 		mkdir -p $FLASHBACKDIR/Backups || exit 1
+			else 	# or Abort.
+		 		echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
 				exit 1; fi; fi ;}
 # -----------------------\
 
 pause(){
-	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" -t 120  # read has a timeout function that could be used to advance the script by its own.
+	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" -t 10  # read has a timeout function that could be used to advance the script by its own.
 		exit_status=$?
 		if [[ $exit_status -eq 142 ]]; then
     		exit 0
@@ -175,6 +175,10 @@ three(){ # Function that deletes backups
 				unset RESET
 				set -f
 				read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[104mSelect Backup\e[0m'` -> " DELETEBACKUP
+					exit_status=$?
+					if [[ $exit_status -eq 142 ]]; then
+    					exit 0
+					fi
 				DELETELOCATION=$FLASHBACKDIR/Backups/$DELETEBACKUP
 				#DELETEBACKUP=${DELETEBACKUP//[^a-zA-Z0-9-.]/}
 			   if [[ $DELETEBACKUP = "" ]]; then
@@ -210,6 +214,17 @@ four(){ # Function that deletes autobackups made in function two
 	pause ;}
 	
 five(){ # I'm not going to painstakingly fix this. You gotta do that yourself. - Apollo
+
+	if [ ! -d /var/mobile/Documents/FlashBackDEBs/ ] ; then # check for /Library/Flashback/Backups, ask the user to create it if it doesn't exist.
+		echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory /var/mobile/Documents/FlashBackDEBs/ doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
+		read -rp "	[y/N] " response # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
+			if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
+				then 	# Do it.
+					mkdir -p /var/mobile/Documents/FlashBackDEBs/ || exit 1
+				else 	# or Abort.
+			 		echo -e "\n\e[1;97m\"Run away! Run away!\" \e[0m\n" 
+					exit 1; fi; fi ;}
+
 	echo -e "\n\e[104m Available Backps: \e[0m \n"
 	for i in $(ls $FLASHBACKDIR/Backups/ || echo "#CRTL-C_to_exit#") ; do # Find and sed are not default commands- can't exclude files.
 		echo -e " \e[100m---->\e[0m  \e[33m$i\e[0m" ; done
@@ -280,10 +295,10 @@ EOF
 	
 	dpkg-deb -Zgzip -b $WORKINGDIR &> /dev/null
 	echo -e "\e[0;100m[!]\e[0m Creating DEB..."
-	cp $WORKINGDIR.deb $FLASHBACKDIR
+	cp $WORKINGDIR.deb "/var/mobile/Documents/FlashBackDEBs/"
 	rm -r -f $FLASHBACKDIR/tmp
 	
-	echo -e "\n\e[0;100m[!]\e[0mThe DEB can be found in "$FLASHBACKDIR"/"com.$USERNAME.$PACKAGEBACKUP".deb"
+	echo -e "\n\e[0;100m[!]\e[0mThe DEB can be found in /var/mobile/Documents/FlashBackDEBs/com.$USERNAME.$PACKAGEBACKUP.deb"
 
 # TODO MCApollo
 # Use dpkg-deb or dpkg to make sure it's a vaild package. (Maybe extract it?) 
@@ -325,7 +340,12 @@ read_options(){
 tests
 while true
 do
+	exit_status=$?
+		if [[ $exit_status -eq 142 ]]; then
+    		exit 0
+		fi
  	shopt -s extglob
+	FlashBack_Updater
 	show_menus
 	echo " "
 	read_options

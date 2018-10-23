@@ -1,0 +1,3 @@
+#!/bin/bash
+
+mv /Library/FlashBack/Backups/*/v1_* /Library/FlashBack/Backups/*/v2
