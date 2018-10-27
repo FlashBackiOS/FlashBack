@@ -1,9 +1,9 @@
 Package: com.mpg13.FlashBack
 Name: FlashBack
 Depends: mobilesubstrate, com.chpwn.iconsupport
-Version: 1.6
+Version: 1.7
 Architecture: iphoneos-arm
-Description: Change the way we do setups.
+Description: Changing the way we do setups.
 Homepage: https://flashback.github.io
 Depiction: https://FlashBackiOS.github.io/depicts/com.mpg13.flashback.html
 Maintainer: MPG13 <micahplacido@gmail.com>
