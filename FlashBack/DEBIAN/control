@@ -1,6 +1,6 @@
 Package: com.mpg13.FlashBack
 Name: FlashBack
-Depends: mobilesubstrate, com.chpwn.iconsupport
+Depends: mobilesubstrate, com.chpwn.iconsupport, com.creaturecoding.crux
 Version: 1.7
 Architecture: iphoneos-arm
 Description: Changing the way we do setups.
@@ -9,4 +9,4 @@ Depiction: https://FlashBackiOS.github.io/depicts/com.mpg13.flashback.html
 Maintainer: MPG13 <micahplacido@gmail.com>
 Author: MPG13 <micahplacido@gmail.com>
 Section: Tweaks
-Icon: file:///Library/FlashBack/CydiaIcon.png
+Icon: https://flashbackios.github.io/images/FlashBack.png
