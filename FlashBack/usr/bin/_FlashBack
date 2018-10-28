@@ -61,9 +61,8 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 	echo -e "\n\e[0;100m[*]\e[0m\e[1;31m Directory $FLASHBACKDIR/Backups doesn't exist!\e[0m \n\n\e[1;37mShall it be created?\e[0m"
 	read -rp "	[y/N] " -t 15 RESPONSE # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
 	LASTINPUT=$RESPONSE
-	prgmNav
+	prgmNav && killIfIdle
 	
-	killIfIdle
 		if [[ "$RESPONSE" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
 			then 	# Do it.
 		 		mkdir -p $FLASHBACKDIR/Backups || exit 1
@@ -75,7 +74,9 @@ if [ ! -d $FLASHBACKDIR/Backups ] ; then # check for /Library/Flashback/Backups,
 pause(){
 	read -sp "`echo -e '\n\e[0;100m[!]\e[0m \e[104mPress enter to continue...\e[0m'`" -t 10  # read has a timeout function that could be used to advance the script by its own.
 	killIfIdle
-	echo -e "\n" ;}
+	echo -e "\n" ;
+	displayMenu
+}
 	
 # -----------------------\ 
 
@@ -103,11 +104,11 @@ one() { # Function that backs-up the current preferences
 	echo -e "\n\e[0;100m[!]\e[0m \e[104mCopying to $BACKUPLOCATION\e[0m"
 	
 	cp -rf "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers|.GlobalPreferences).plist $BACKUPLOCATION/Preferences/ || STATUS="cp failed" #copy all non-apple Plists to Preference folder within backup haha
-	cp -rf "/var/mobile/Library/Preferences/"*(*.jpg|*.png|*.gif) $BACKUPLOCATION/Preferences/ || STATUS="cp failed"	#copy all images to Preference folder within backup
+	cp -rf "/var/mobile/Library/Preferences/"*(*.jpg|*.png|*.gif) $BACKUPLOCATION/Preferences/ &>/dev/null	#copy all images to Preference folder within backup
 	cp -rf /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $BACKUPLOCATION/SBFolder/ || STATUS="cp failed"		#copy IconState Plist to SBFolder folder within backup
 	if [[ -d /var/mobile/Media/AutoWall/ ]]
 	then
-		cp -rf "/var/mobile/Media/AutoWall/"* "$BACKUPLOCATION/AutoWall/" || STATUS="cp failed"
+		cp -rf "/var/mobile/Media/AutoWall/"* "$BACKUPLOCATION/AutoWall/"
 	fi
 	touch $BACKUPLOCATION/$BKPVERSION
 	
@@ -155,34 +156,40 @@ two() { # Restore backups made with function one
 	
 	if [ -f $SELECTLOCATION/$BKPVERSION ]
 	then
-	
-		AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
+		echo -e "\n\e[0;100m[!]\e[0m \e[104mIt's recommended to make an Autobackup before you restore.\e[0m"
+		echo -e "\n\e[0;100m[!]\e[0m \e[104mWould you like to do that now?\e[0m"
+		read -rp "	[y/N] " -t 15 RESPONSE # https://stackoverflow.com/questions/3231804/in-bash-how-to-add-are-you-sure-y-n-to-any-command-or-alias
+		if [[ "$RESPONSE" =~ ^([yY][eE][sS]|[yY])+$ ]] # Couldn't remember the expression for this.
+		then 	# Do it.
+			
+			AUTOBACKUPLOCATION=$FLASHBACKDIR/Backups/AutoBackup_$(date '+%d-%m-%Y_%H:%M:%S')
+			
+			echo -e "\n\e[0;100m[!]\e[0m \e[104mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
 		
-		echo -e "\n\e[0;100m[!]\e[0m \e[104mMoving current Preferences to $AUTOBACKUPLOCATION\e[0m"
-		
-		mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder,AutoWall} || STATUS="mkdir failed"
-		cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
-		cp -rf "/var/mobile/Library/Preferences/"*(*.jpg|*.png|*.gif) $BACKUPLOCATION/Preferences/ || STATUS="cp failed"
-		cp -r /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
-		if [[ -d /var/mobile/Media/AutoWall/ ]]
-		then
-			cp -rf "/var/mobile/Media/AutoWall/"* "$AUTOBACKUPLOCATION/AutoWall/" || STATUS="cp failed"
-		fi
-		touch $AUTOBACKUPLOCATION/$BKPVERSION
-		
+			mkdir -p $AUTOBACKUPLOCATION/{Preferences,SBFolder,AutoWall} || STATUS="mkdir failed"
+			cp "/var/mobile/Library/Preferences/"!(com.apple*|com.saurik*|ckkeyrolld|nfcd|UITextInputContextIdentifiers).plist  $AUTOBACKUPLOCATION/Preferences || STATUS="cp failed"
+			cp -rf "/var/mobile/Library/Preferences/"*(*.jpg|*.png|*.gif) $BACKUPLOCATION/Preferences/ || STATUS="cp failed"
+			cp -r /var/mobile/Library/SpringBoard/@(*Icon*|*Background*|SB*) $AUTOBACKUPLOCATION/SBFolder/ || STATUS="cp failed"
+			if [[ -d /var/mobile/Media/AutoWall/ ]]
+			then
+				cp -rf "/var/mobile/Media/AutoWall/"* "$AUTOBACKUPLOCATION/AutoWall/" || STATUS="cp failed"
+			fi
+			touch $AUTOBACKUPLOCATION/$BKPVERSION
+			fi
+			
 		echo -e "\n\e[0;100m[!]\e[0m \e[104mCopying Backup to appropriate system directories...\e[0m"
 		
 		cp -r $SELECTLOCATION/Preferences/* /var/mobile/Library/Preferences/ || STATUS="cp failed"
 		cp -r $SELECTLOCATION/SBFolder/* /var/mobile/Library/SpringBoard/ || STATUS="cp failed"
 		if [[ -d $SELECTLOCATION/AutoWall/ ]]
 		then
-			cp -rf $SELECTLOCATION/AutoWall/* /var/mobile/Media/AutoWall/  || STATUS="cp failed"
+			cp -rf "$SELECTLOCATION/AutoWall/"* "/var/mobile/Media/AutoWall/" &>/dev/null
 		fi
 		
 		echo -e "\n\e[0;100m[*]\e[0m \e[104mRebuilding image cache...\e[0m"
 		
 		uicache || STATUS="uicache failed"
-		recache --no respring &>/dev/null || echo -e "\n\e[0;100m[*]\e[0m \e[104mAnemone not installed. Proceeding anyway.\e[0m"
+		recache --no respring &>/dev/null || echo -e "\n\e[0;100m[*]\e[0m \e[104mAnemone not installed. Recache ignored.\e[0m"
 		killall cfprefsd #Clear settings caches - thanks to Grant/NewD
 		
 		if [[ ! $STATUS = "" ]] ; then
@@ -378,7 +385,7 @@ echo -e "\n\e[104m Available Backups: \e[0m \n"
 		set -f
 		unset RESET
 		read -p "`echo -e '\n\e[0;100m[!]\e[0m \e[104mSelect Backup\e[0m'` -> " -t 20 UPDATEBACKUP
-		killIfIdle
+		prgmNav && killIfIdle
 		UPDATEBACKUP=${UPDATEBACKUP//[^a-zA-Z0-9-.]/}
 		if [[ $UPDATEBACKUP = "" ]] ; then
 			echo -e "\n\e[0;100m[*]\e[0m \e[1;31mBad or no input!\e[0m\n" 
@@ -447,6 +454,7 @@ read_options(){
 }
 displayMenu(){
 	clear
+	cp &>/dev/null
 	shopt -s extglob
 	show_menus
 	echo " "
